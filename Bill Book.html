@@ -6,7 +6,6 @@
 <title>Locksmith Bill Book</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Bill Book">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%1e40af'/><text y='60' font-size='50' text-anchor='middle' x='50' fill='white'>Bill</text></svg>">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -130,18 +129,17 @@
 </div>
 
 <script>
-// SAFE LOAD - No external IDB, uses localStorage for history (works everywhere)
+// Ultra-safe script - no external dependencies that can crash
 (function() {
-    'use strict';
 
-    // History using localStorage (no IndexedDB crash)
-    let historyData = JSON.parse(localStorage.getItem('billHistory') || '[]');
-    function saveHistory() { localStorage.setItem('billHistory', JSON.stringify(historyData)); }
+    // localStorage history (works on all browsers, including Safari on GitHub Pages)
+    let historyData = JSON.parse(localStorage.getItem('billbook_history') || '[]');
+    function saveHistory() { localStorage.setItem('billbook_history', JSON.stringify(historyData)); }
     function updateHistoryCount() { document.getElementById('historyCount').textContent = historyData.length; }
     function addToHistory(bill) { historyData.unshift(bill); if (historyData.length > 100) historyData.pop(); saveHistory(); updateHistoryCount(); }
     function loadHistory() {
         const list = document.getElementById('historyList');
-        list.innerHTML = historyData.map(b => `
+        list.innerHTML = historyData.map((b, i) => `
             <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
                 <div>
                     <strong class="text-lg">${b.invoiceNo}</strong> • ${b.date}
@@ -149,26 +147,24 @@
                     <div class="font-bold text-blue-600">${b.total}</div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="viewBill('${b.id}')" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
-                    <button onclick="deleteBill('${b.id}')" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
+                    <button onclick="viewBill(${i})" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
+                    <button onclick="deleteBill(${i})" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
                 </div>
             </div>
         `).join('');
     }
-    function viewBill(id) {
-        const bill = historyData.find(b => b.id === id);
-        if (bill) {
-            document.getElementById('bill').innerHTML = bill.html;
-            document.getElementById('controls').innerHTML = `<div class="text-center my-10"><button onclick="location.reload()" class="bg-gray-600 text-white px-8 py-4 rounded-lg text-lg">Back to New Bill</button></div>`;
-        }
-    }
-    function deleteBill(id) {
+    window.viewBill = function(i) {
+        const b = historyData[i];
+        document.getElementById('bill').innerHTML = b.html;
+        document.getElementById('controls').innerHTML = `<div class="text-center my-10"><button onclick="location.reload()" class="bg-gray-600 text-white px-8 py-4 rounded-lg text-lg">Back to New Bill</button></div>`;
+    };
+    window.deleteBill = function(i) {
         if (confirm('Delete this bill permanently?')) {
-            historyData = historyData.filter(b => b.id !== id);
+            historyData.splice(i, 1);
             saveHistory();
             loadHistory();
         }
-    }
+    };
 
     // Tabs
     document.getElementById('tabBill').onclick = () => {
@@ -181,18 +177,10 @@
         loadHistory();
     };
 
-    // Search
-    document.getElementById('searchHistory').addEventListener('input', e => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#historyList > div').forEach(div => {
-            div.style.display = div.textContent.toLowerCase().includes(term) ? '' : 'none';
-        });
-    });
-
-    // Invoice
+    // Invoice number
     function getNextInvoice() {
         const today = new Date().toISOString().slice(2,10).replace(/-/g,'');
-        const key = 'counter_'+today;
+        const key = 'billbook_counter_' + today;
         let num = (parseInt(localStorage.getItem(key) || '0')) + 1;
         localStorage.setItem(key, num);
         document.getElementById('invoiceNo').textContent = today + '-' + String(num).padStart(3,'0');
@@ -200,7 +188,7 @@
     getNextInvoice();
     document.getElementById('billDate').valueAsDate = new Date();
 
-    // Sync text
+    // Sync text for print/PDF
     function syncText() {
         document.getElementById('customerPrint').textContent = document.getElementById('customer').value || '';
         document.getElementById('descriptionPrint').textContent = document.getElementById('description').value || '';
@@ -245,7 +233,8 @@
     const preview = document.getElementById('signaturePreview');
     let drawing = false;
     function resizeCanvas() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }
-    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
     function openSignatureModal() { modal.classList.remove('hidden'); clearModalSignature(); resizeCanvas(); }
     function closeSignatureModal() { modal.classList.add('hidden'); }
     function clearModalSignature() { ctx.clearRect(0,0,canvas.width,canvas.height); }
@@ -261,11 +250,10 @@
     ['mousemove','touchmove'].forEach(ev => canvas.addEventListener(ev, e => { e.preventDefault(); if(drawing){ const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke(); }}));
     ['mouseup','mouseout','touchend','touchcancel'].forEach(ev => canvas.addEventListener(ev, () => drawing=false));
 
-    // Save to history
+    // Save bill to history
     function saveCurrentBill() {
         syncText();
         const bill = {
-            id: Date.now(),
             invoiceNo: document.getElementById('invoiceNo').textContent,
             date: document.getElementById('billDate').value,
             customer: document.getElementById('customer').value,
@@ -278,9 +266,9 @@
     }
 
     // Buttons
-    function printNow() { syncText(); saveCurrentBill(); setTimeout(() => window.print(), 200); }
-    function savePDF() { syncText(); saveCurrentBill(); setTimeout(() => { const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP'; const no = document.getElementById('invoiceNo').textContent; html2pdf().set({margin:8, filename:`${type}_${no}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save(); }, 300); }
-    function newBill() { if(confirm('Start a new bill?')) { document.getElementById('customer').value = ''; document.getElementById('description').value = ''; clearSignature(); syncText(); updateBilling(); getNextInvoice(); } }
+    window.printNow = function() { syncText(); saveCurrentBill(); setTimeout(() => window.print(), 200); };
+    window.savePDF = function() { syncText(); saveCurrentBill(); setTimeout(() => { const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP'; const no = document.getElementById('invoiceNo').textContent; html2pdf().set({margin:8, filename:`${type}_${no}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save(); }, 300); };
+    window.newBill = function() { if(confirm('Start a new bill?')) { document.getElementById('customer').value = ''; document.getElementById('description').value = ''; clearSignature(); syncText(); updateBilling(); getNextInvoice(); } };
 
     // Init
     updateHistoryCount();
