@@ -130,97 +130,45 @@
 </div>
 
 <script>
-// FAIL-SAFE INITIALIZATION (no crashes on GitHub Pages/Safari)
-window.addEventListener('load', function() {
-    // Safe IndexedDB
-    let historyEnabled = false;
-    let dbPromise = null;
-    try {
-        if ('indexedDB' in window) {
-            dbPromise = idb.openDB('BillBookDB', 1, {
-                upgrade(db) {
-                    db.createObjectStore('bills', { keyPath: 'id', autoIncrement: true });
-                }
-            });
-            historyEnabled = true;
-        }
-    } catch (e) {
-        console.warn('IndexedDB blocked — history disabled');
-    }
+// SAFE LOAD - No external IDB, uses localStorage for history (works everywhere)
+(function() {
+    'use strict';
 
-    // Safe history functions
-    window.saveCurrentBill = async function() {
-        if (!historyEnabled || !dbPromise) return;
-        try {
-            syncText();
-            const bill = {
-                invoiceNo: document.getElementById('invoiceNo').textContent,
-                date: document.getElementById('billDate').value,
-                customer: document.getElementById('customer').value,
-                description: document.getElementById('description').value,
-                total: document.getElementById('totalDue').textContent,
-                signature: document.getElementById('signaturePreview').src || '',
-                html: document.getElementById('bill').innerHTML,
-                timestamp: new Date().toISOString()
-            };
-            const db = await dbPromise;
-            await db.add('bills', bill);
-            updateHistoryCount();
-        } catch (e) { console.log('Save failed — continuing'); }
-    };
-
-    window.loadHistory = async function() {
-        if (!historyEnabled || !dbPromise) return;
-        try {
-            const db = await dbPromise;
-            const bills = await db.getAll('bills');
-            bills.reverse();
-            const list = document.getElementById('historyList');
-            list.innerHTML = bills.map(b => `
-                <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-                    <div>
-                        <strong class="text-lg">${b.invoiceNo}</strong> • ${new Date(b.timestamp).toLocaleDateString()}
-                        <div class="text-gray-600">${b.customer.split('\n')[0] || 'No customer'}</div>
-                        <div class="font-bold text-blue-600">${b.total}</div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="viewBill(${b.id})" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
-                        <button onclick="deleteBill(${b.id})" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
-                    </div>
+    // History using localStorage (no IndexedDB crash)
+    let historyData = JSON.parse(localStorage.getItem('billHistory') || '[]');
+    function saveHistory() { localStorage.setItem('billHistory', JSON.stringify(historyData)); }
+    function updateHistoryCount() { document.getElementById('historyCount').textContent = historyData.length; }
+    function addToHistory(bill) { historyData.unshift(bill); if (historyData.length > 100) historyData.pop(); saveHistory(); updateHistoryCount(); }
+    function loadHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = historyData.map(b => `
+            <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <strong class="text-lg">${b.invoiceNo}</strong> • ${b.date}
+                    <div class="text-gray-600">${b.customer.split('\n')[0] || 'No customer'}</div>
+                    <div class="font-bold text-blue-600">${b.total}</div>
                 </div>
-            `).join('');
-        } catch (e) { console.log('Load failed — continuing'); }
-    };
-
-    window.viewBill = async function(id) {
-        if (!historyEnabled || !dbPromise) return;
-        try {
-            const db = await dbPromise;
-            const bill = await db.get('bills', id);
+                <div class="flex gap-2">
+                    <button onclick="viewBill('${b.id}')" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
+                    <button onclick="deleteBill('${b.id}')" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+    function viewBill(id) {
+        const bill = historyData.find(b => b.id === id);
+        if (bill) {
             document.getElementById('bill').innerHTML = bill.html;
             document.getElementById('controls').innerHTML = `<div class="text-center my-10"><button onclick="location.reload()" class="bg-gray-600 text-white px-8 py-4 rounded-lg text-lg">Back to New Bill</button></div>`;
-        } catch (e) { console.log('View failed — continuing'); }
-    };
-
-    window.deleteBill = async function(id) {
-        if (!historyEnabled || !dbPromise) return;
+        }
+    }
+    function deleteBill(id) {
         if (confirm('Delete this bill permanently?')) {
-            try {
-                const db = await dbPromise;
-                await db.delete('bills', id);
-                loadHistory();
-                updateHistoryCount();
-            } catch (e) { console.log('Delete failed — continuing'); }
+            historyData = historyData.filter(b => b.id !== id);
+            saveHistory();
+            loadHistory();
         }
-    };
-
-    window.updateHistoryCount = function() {
-        if (!historyEnabled) {
-            document.getElementById('historyCount').textContent = '—';
-            return;
-        }
-        dbPromise.then(db => db.count('bills')).then(c => document.getElementById('historyCount').textContent = c).catch(() => document.getElementById('historyCount').textContent = '?');
-    };
+    }
 
     // Tabs
     document.getElementById('tabBill').onclick = () => {
@@ -228,14 +176,13 @@ window.addEventListener('load', function() {
         document.getElementById('historyView').classList.add('hidden');
     };
     document.getElementById('tabHistory').onclick = () => {
-        if (!historyEnabled) return;
         document.getElementById('billView').classList.add('hidden');
         document.getElementById('historyView').classList.remove('hidden');
         loadHistory();
     };
 
     // Search
-    document.getElementById('searchHistory')?.addEventListener('input', e => {
+    document.getElementById('searchHistory').addEventListener('input', e => {
         const term = e.target.value.toLowerCase();
         document.querySelectorAll('#historyList > div').forEach(div => {
             div.style.display = div.textContent.toLowerCase().includes(term) ? '' : 'none';
@@ -314,15 +261,30 @@ window.addEventListener('load', function() {
     ['mousemove','touchmove'].forEach(ev => canvas.addEventListener(ev, e => { e.preventDefault(); if(drawing){ const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke(); }}));
     ['mouseup','mouseout','touchend','touchcancel'].forEach(ev => canvas.addEventListener(ev, () => drawing=false));
 
+    // Save to history
+    function saveCurrentBill() {
+        syncText();
+        const bill = {
+            id: Date.now(),
+            invoiceNo: document.getElementById('invoiceNo').textContent,
+            date: document.getElementById('billDate').value,
+            customer: document.getElementById('customer').value,
+            description: document.getElementById('description').value,
+            total: document.getElementById('totalDue').textContent,
+            signature: document.getElementById('signaturePreview').src || '',
+            html: document.getElementById('bill').innerHTML
+        };
+        addToHistory(bill);
+    }
+
     // Buttons
-    window.printNow = function() { syncText(); if(historyEnabled) saveCurrentBill(); setTimeout(() => window.print(), 200); };
-    window.savePDF = function() { syncText(); if(historyEnabled) saveCurrentBill(); setTimeout(() => { const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP'; const no = document.getElementById('invoiceNo').textContent; html2pdf().set({margin:8, filename:`${type}_${no}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save(); }, 300); };
-    window.newBill = function() { if(confirm('Start a new bill?')) { document.getElementById('customer').value = ''; document.getElementById('description').value = ''; clearSignature(); syncText(); updateBilling(); getNextInvoice(); } };
+    function printNow() { syncText(); saveCurrentBill(); setTimeout(() => window.print(), 200); }
+    function savePDF() { syncText(); saveCurrentBill(); setTimeout(() => { const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP'; const no = document.getElementById('invoiceNo').textContent; html2pdf().set({margin:8, filename:`${type}_${no}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save(); }, 300); }
+    function newBill() { if(confirm('Start a new bill?')) { document.getElementById('customer').value = ''; document.getElementById('description').value = ''; clearSignature(); syncText(); updateBilling(); getNextInvoice(); } }
 
     // Init
     updateHistoryCount();
-});
-
+})();
 </script>
 </body>
 </html>
