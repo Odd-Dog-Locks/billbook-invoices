@@ -4,23 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Locksmith Bill Book</title>
-<!-- Add these for perfect "Add to Home Screen" -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Book">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%1e40af'/><text y='60' font-size='50' text-anchor='middle' x='50' fill='white'>Bill</text></svg>">
-
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
-
 <style>
     @media print {
         @page { margin: 8mm; size: A4 portrait; }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
         #controls, #modeToggleContainer, #signatureModal, #historyView, #tabBill, #tabHistory, .no-print { display: none !important; }
         #billView, #bill { display: block !important; box-shadow: none !important; border-radius: 0 !important; width: 210mm !important; min-height: 297mm !important; margin: 0 !important; }
-        .preserve { white-space: pre-line !important; display: block !important; border: 1px solid #d1d5db !important; border-radius: 0.375rem !important; padding: 0.5rem !important; font-size: 0.875rem !important; }
+        .preserve { white-space: pre-line !important; display: block !important; border: 1px solid #d1d5db !important; border-radius: 0.375rem !important; padding: 0.5rem !important; font-size: 0.875rem !important; margin-top: 0.25rem !important; }
         textarea { display: none !important; }
         h1 { font-size: 22pt !important; }
     }
@@ -55,9 +52,7 @@
             </div>
         </div>
 
-        <!-- Your full bill layout (unchanged) -->
         <div id="bill" class="bg-white rounded-xl overflow-hidden shadow-xl">
-            <!-- ... exact same bill HTML as before ... -->
             <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-5 text-center">
                 <h1 contenteditable="true" class="text-3xl font-bold outline-none leading-none">Your Business Name</h1>
                 <p contenteditable="true" class="text-sm mt-2 outline-none">123 Main Street • City • State</p>
@@ -83,7 +78,8 @@
                         <strong>Itemized Charges</strong>
                         <div class="text-xs">Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-14 text-right border rounded px-1 py-0.5">%</div>
                     </div>
-                    <table class="w-full mt-2"><tbody id="itemsTable" class="text-xs"></tbody>
+                    <table class="w-full mt-2">
+                        <tbody id="itemsTable" class="text-xs"></tbody>
                         <tfoot class="border-t border-gray-700">
                             <tr><td colspan="2" class="text-right font-bold py-1">Subtotal:</td><td class="text-right font-bold" id="subtotal">$0.00</td></tr>
                             <tr><td colspan="2" class="text-right py-1">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
@@ -103,7 +99,7 @@
                         <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain mx-auto block" style="display:none; margin-top:12px;">
                     </div>
                     <div class="mt-3 flex gap-3 no-print">
-                        <button onclick="openSignatureModal()" class nanoscale="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded">Add Signature</button>
+                        <button onclick="openSignatureModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded">Add Signature</button>
                         <button onclick="clearSignature()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded">Clear</button>
                     </div>
                 </div>
@@ -122,7 +118,6 @@
     </div>
 </div>
 
-<!-- Signature Modal (unchanged) -->
 <div id="signatureModal" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50 p-4 no-print">
     <div class="bg-white rounded-2xl shadow-3xl w-full max-w-2xl p-6">
         <h3 class="text-2xl font-bold text-center mb-4">Sign Here</h3>
@@ -136,8 +131,9 @@
 </div>
 
 <script>
-// ─────── SAFE INDEXEDDB INITIALIZATION (this is the fix!) ───────
+// FAIL-SAFE INDEXEDDB (no more crashes on iOS Safari/GitHub Pages)
 let dbPromise = null;
+let historyEnabled = false;
 try {
     if ('indexedDB' in window) {
         dbPromise = idb.openDB('BillBookDB', 1, {
@@ -145,14 +141,16 @@ try {
                 db.createObjectStore('bills', { keyPath: 'id', autoIncrement: true });
             }
         });
+        historyEnabled = true;
     }
 } catch (e) {
-    console.warn("IndexedDB not available (normal on iOS Safari sometimes)", e);
+    console.warn('IndexedDB blocked (iOS Safari/GitHub Pages) — history disabled', e);
+    document.getElementById('tabHistory').style.display = 'none'; // Hide history tab if disabled
 }
 
-// Fall back to dummy functions if DB is blocked
+// Safe history functions
 async function saveCurrentBill() {
-    if (!dbPromise) return;
+    if (!historyEnabled || !dbPromise) return;
     try {
         syncText();
         const bill = {
@@ -168,37 +166,131 @@ async function saveCurrentBill() {
         const db = await dbPromise;
         await db.add('bills', bill);
         updateHistoryCount();
-    } catch (e) { console.log("History save skipped (offline/private mode)"); }
+    } catch (e) { console.log('History save failed — continuing'); }
 }
 
-// ─────── Rest of your script (100% unchanged and working) ───────
-async function loadHistory() { /* unchanged */ }
-async function viewBill(id) { /* unchanged */ }
-async function deleteBill(id) { /* unchanged */ }
+async function loadHistory() {
+    if (!historyEnabled || !dbPromise) return;
+    try {
+        const db = await dbPromise;
+        const bills = await db.getAll('bills');
+        bills.reverse();
+        const list = document.getElementById('historyList');
+        list.innerHTML = bills.map(b => `
+            <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <strong class="text-lg">${b.invoiceNo}</strong> • ${new Date(b.timestamp).toLocaleDateString()}
+                    <div class="text-gray-600">${b.customer.split('\n')[0] || 'No customer'}</div>
+                    <div class="font-bold text-blue-600">${b.total}</div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="viewBill(${b.id})" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
+                    <button onclick="deleteBill(${b.id})" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { console.log('History load failed — continuing'); }
+}
+
+async function viewBill(id) {
+    if (!historyEnabled || !dbPromise) return;
+    try {
+        const db = await dbPromise;
+        const bill = await db.get('bills', id);
+        document.getElementById('bill').innerHTML = bill.html;
+        document.getElementById('controls').innerHTML = `<div class="text-center my-10"><button onclick="location.reload()" class="bg-gray-600 text-white px-8 py-4 rounded-lg text-lg">Back to New Bill</button></div>`;
+    } catch (e) { console.log('View bill failed — continuing'); }
+}
+
+async function deleteBill(id) {
+    if (!historyEnabled || !dbPromise) return;
+    if (confirm('Delete this bill permanently?')) {
+        try {
+            const db = await dbPromise;
+            await db.delete('bills', id);
+            loadHistory();
+            updateHistoryCount();
+        } catch (e) { console.log('Delete failed — continuing'); }
+    }
+}
+
 function updateHistoryCount() {
-    if (!dbPromise) { document.getElementById('historyCount').textContent = '—          '; return; }
+    if (!historyEnabled) {
+        document.getElementById('historyCount').textContent = '—';
+        return;
+    }
     dbPromise.then(db => db.count('bills')).then(c => document.getElementById('historyCount').textContent = c).catch(() => document.getElementById('historyCount').textContent = '?');
 }
 
-// ... ALL the rest of the script exactly as in the last working version you had
-// (invoice number, syncText, updateBilling, signature pad, printNow, savePDF, newBill, etc.)
+// Tabs
+document.getElementById('tabBill').onclick = () => {
+    document.getElementById('billView').classList.remove('hidden');
+    document.getElementById('historyView').classList.add('hidden');
+};
+document.getElementById('tabHistory').onclick = () => {
+    if (!historyEnabled) return;
+    document.getElementById('billView').classList.add('hidden');
+    document.getElementById('historyView').classList.remove('hidden');
+    loadHistory();
+};
 
-// Quick paste of the core parts you already know work:
-function getNextInvoice() { /* same */ }
+document.getElementById('searchHistory')?.addEventListener('input', e => {
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll('#historyList > div').forEach(div => {
+        div.style.display = div.textContent.toLowerCase().includes(term) ? '' : 'none';
+    });
+});
+
+// Invoice number
+function getNextInvoice() {
+    const today = new Date().toISOString().slice(2,10).replace(/-/g,'');
+    const key = 'counter_'+today;
+    let num = (parseInt(localStorage.getItem(key) || '0')) + 1;
+    localStorage.setItem(key, num);
+    document.getElementById('invoiceNo').textContent = today + '-' + String(num).padStart(3,'0');
+}
 getNextInvoice();
 document.getElementById('billDate').valueAsDate = new Date();
 
-function syncText() { document.getElementById('customerPrint').textContent = document.getElementById('customer').value || ''; document.getElementById('descriptionPrint').textContent = document.getElementById('description').value || ''; }
+// Sync text
+function syncText() {
+    document.getElementById('customerPrint').textContent = document.getElementById('customer').value || '';
+    document.getElementById('descriptionPrint').textContent = document.getElementById('description').value || '';
+}
 ['customer','description'].forEach(id => document.getElementById(id).addEventListener('input', syncText));
 syncText();
 
-function updateBilling() { /* same as before */ }
+// Billing
+function updateBilling() {
+    const lines = document.getElementById('description').value.split('\n').filter(l => l.trim());
+    const table = document.getElementById('itemsTable');
+    table.innerHTML = '';
+    let subtotal = 0;
+    lines.forEach(line => {
+        const match = line.match(/[$₹£€]?\s*(\d+(?:\.\d{1,2})?)\b/i);
+        if (match) {
+            const amount = parseFloat(match[1]);
+            subtotal += amount;
+            table.innerHTML += `<tr><td colspan="2" class="py-0.5">${line.trim()}</td><td class="text-right font-medium">$${amount.toFixed(2)}</td></tr>`;
+        }
+    });
+    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    document.getElementById('taxPercent').textContent = taxRate.toFixed(1);
+    const tax = subtotal * (taxRate / 100);
+    const total = subtotal + tax;
+    document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('taxAmount').textContent = '$' + tax.toFixed(2);
+    document.getElementById('totalDue').textContent = '$' + total.toFixed(2);
+}
 document.getElementById('description').addEventListener('input', updateBilling);
 document.getElementById('taxRate').addEventListener('input', updateBilling);
-document.getElementById('modeToggle').addEventListener('change', e => { document.getElementById('billingSection').style.display = e.target.checked ? 'block' : 'none'; if (e.target.checked) updateBilling(); });
+document.getElementById('modeToggle').addEventListener('change', e => {
+    document.getElementById('billingSection').style.display = e.target.checked ? 'block' : 'none';
+    if (e.target.checked) updateBilling();
+});
 document.getElementById('modeToggle').dispatchEvent(new Event('change'));
 
-// Signature pad (fixed getBoundingClientRect)
+// Signature
 const modal = document.getElementById('signatureModal');
 const canvas = document.getElementById('signatureCanvas');
 const ctx = canvas.getContext('2d');
@@ -221,10 +313,12 @@ function getPos(e) {
 ['mousemove','touchmove'].forEach(ev => canvas.addEventListener(ev, e => { e.preventDefault(); if(drawing){ const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke(); }}));
 ['mouseup','mouseout','touchend','touchcancel'].forEach(ev => canvas.addEventListener(ev, () => drawing=false));
 
-function printNow() { syncText(); if(dbPromise) saveCurrentBill(); setTimeout(() => window.print(), 200); }
-function savePDF() { syncText(); if(dbPromise) saveCurrentBill(); setTimeout(() => { const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP'; const no = document.getElementById('invoiceNo').textContent; html2pdf().set({margin:8, filename:`${type}_${no}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save(); }, 300); }
-function newBill() { if(confirm('Start a new bill?')) { document.getElementById('customer').value = ''; document.getElementById('description').value = ''; clearSignature(); syncText(); updateBilling(); getNextInvoice(); }}
+// Buttons
+function printNow() { syncText(); if(historyEnabled) saveCurrentBill(); setTimeout(() => window.print(), 200); }
+function savePDF() { syncText(); if(historyEnabled) saveCurrentBill(); setTimeout(() => { const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP'; const no = document.getElementById('invoiceNo').textContent; html2pdf().set({margin:8, filename:`${type}_${no}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save(); }, 300); }
+function newBill() { if(confirm('Start a new bill?')) { document.getElementById('customer').value = ''; document.getElementById('description').value = ''; clearSignature(); syncText(); updateBilling(); getNextInvoice(); } }
 
+// Init
 updateHistoryCount();
 </script>
 </body>
