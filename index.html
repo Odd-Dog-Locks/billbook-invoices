@@ -12,19 +12,19 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-    body { background: #f3f4f6; font-family: system-ui, sans-serif; }
+    body { background: #f3f4f6; }
     @media print {
         @page { margin: 6mm !important; size: A4 portrait; }
         body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, .no-print { display: none !important; }
+        #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, #tabBill, #tabHistory, .no-print { display: none !important; }
         #bill { box-shadow: none !important; border-radius: 0 !important; width: 198mm !important; margin: 0 !important; background: white !important; }
         .preserve { display: block !important; border: 1px solid #ddd !important; padding: 6px 8px !important; border-radius: 6px !important; font-size: 11pt !important; margin-top: 4px !important; }
         textarea { display: none !important; }
         h1 { font-size: 21pt !important; margin: 0 !important; }
         .text-4xl { font-size: 21pt !important; }
         .text-sm { font-size: 10pt !important; }
-        .space-y-4 > * + * { margin-top: 8px !important; }
-        .h-32 { height: 70px !important; }
+        .space-y-5 > * + * { margin-top: 8px !important; }
+        .h-48 { height: 70px !important; }
     }
     .preserve { white-space: pre-line; display: none; }
     #signatureCanvas { touch-action: none; }
@@ -64,16 +64,16 @@
             <p contenteditable="true" class="text-base outline-none">+91 98765 43210</p>
         </div>
 
-        <div class="p-5 space-y-4 text-sm">
-            <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="p-5 space-y-5 text-sm">
+            <div class="grid grid-cols-2 gap-4">
                 <div><strong>Invoice No:</strong> <span id="invoiceNo" class="ml-2 bg-gray-200 px-3 py-0.5 rounded font-mono font-bold text-blue-800">251130-001</span></div>
                 <div><strong>Date:</strong> <input type="date" id="billDate" class="ml-2 border-b-2 border-gray-400 w-32" readonly></div>
             </div>
 
             <div>
-                <strong>Customer:</strong><br>
-                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
-                <div id="customerPrint" class="preserve"></div>
+                <strong>Customer Name & Address:</strong><br>
+                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none text-right" style="direction: rtl;"></textarea>
+                <div id="customerPrint" class="preserve text-right"></div>
             </div>
 
             <div id="descriptionTitle"><strong>Description of Work Performed:</strong></div>
@@ -90,6 +90,13 @@
                     <tr><td class="text-right">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
                     <tr class="border-t-2 border-double border-black"><td class="text-right text-base">TOTAL DUE:</td><td class="text-right text-xl text-blue-700" id="totalDue">$0.00</td></tr>
                 </table>
+            </div>
+
+            <!-- New Customer Name field (half width) -->
+            <div class="mt-4">
+                <strong>Customer Name:</strong><br>
+                <input type="text" id="customerName" class="w-1/2 mt-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-600 outline-none">
+                <div id="customerNamePrint" class="preserve mt-1 text-sm"></div>
             </div>
 
             <div id="signatureSection" class="border-t pt-3 text-sm">
@@ -145,27 +152,34 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('modeBILL').onclick = () => setMode('BILL');
     document.getElementById('modePROP').onclick = () => setMode('PROP');
 
-    // Invoice & Date
+    // Invoice number
     const today = new Date().toISOString().slice(2,10).replace(/-/g,'');
     let counter = (parseInt(localStorage.getItem('billbook_counter_'+today)||0)) + 1;
     localStorage.setItem('billbook_counter_'+today, counter);
     document.getElementById('invoiceNo').textContent = today + '-' + String(counter).padStart(3,'0');
     document.getElementById('billDate').valueAsDate = new Date();
 
-    // Sync + Billing
+    // Sync text + new customer name
     const syncText = () => {
         document.getElementById('customerPrint').textContent = document.getElementById('customer').value;
         document.getElementById('descriptionPrint').textContent = document.getElementById('description').value;
+        document.getElementById('customerNamePrint').textContent = document.getElementById('customerName').value;
     };
+    document.getElementById('customer').addEventListener('input', syncText);
+    document.getElementById('description').addEventListener('input', syncText);
+    document.getElementById('customerName').addEventListener('input', syncText);
+    syncText();
+
+    // Billing
     const updateBilling = () => {
         if (currentMode === 'NSP') { document.getElementById('itemsTable').innerHTML = ''; ['subtotal','taxAmount','totalDue'].forEach(id => document.getElementById(id).textContent = '$0.00'); return; }
-        const lines = document.getElementById('description').value.split('\n');
+        const lines = document.getElementById('description').value.split('\n').filter(l => l.trim());
         const table = document.getElementById('itemsTable'); table.innerHTML = '';
         let subtotal = 0;
-        lines.forEach(l => {
-            const m = l.match(/[$₹£€]?\s*(\d+(?:\.\d{1,2})?)\b/i);
+        lines.forEach(line => {
+            const m = line.match(/[$₹£€]?\s*(\d+(?:\.\d{1,2})?)\b/i);
             if (m) { const amt = parseFloat(m[1]); subtotal += amt;
-                table.innerHTML += `<tr><td class="py-0.5 pr-3">${l.trim()}</td><td class="text-right font-medium w-20">$${amt.toFixed(2)}</td></tr>`;
+                table.innerHTML += `<tr><td class="py-0.5 pr-3">${line.trim()}</td><td class="text-right font-medium w-20">$${amt.toFixed(2)}</td></tr>`;
             }
         });
         const taxRate = parseFloat(document.getElementById('taxRate').value)||0;
@@ -175,9 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('taxAmount').textContent = '$'+tax.toFixed(2);
         document.getElementById('totalDue').textContent = '$'+(subtotal+tax).toFixed(2);
     };
-
-    document.getElementById('customer').addEventListener('input', syncText);
-    document.getElementById('description').addEventListener('input', () => { syncText(); updateBilling(); });
+    document.getElementById('description').addEventListener('input', updateBilling);
     document.getElementById('taxRate').addEventListener('input', updateBilling);
 
     // Signature (iOS-proof)
