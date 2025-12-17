@@ -12,21 +12,19 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-    body { background: #f3f4f6; } /* Light gray for screen only */
-    
+    body { background: #f3f4f6; font-family: system-ui, sans-serif; }
     @media print {
-        @page { margin: 5mm !important; size: A4 portrait; }
+        @page { margin: 6mm !important; size: A4 portrait; }
         body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, #tabBill, #tabHistory, .no-print { display: none !important; }
-        #billView, #bill { display: block !important; box-shadow: none !important; border-radius: 0 !important; width: 210mm !important; min-height: 297mm !important; margin: 0 !important; padding: 0 !important; background: white !important; }
-        .preserve { white-space: pre-line !important; display: block !important; border: 1px solid #d1d5db !important; border-radius: 0.375rem !important; padding: 0.5rem !important; font-size: 0.8rem !important; margin-top: 0.25rem !important; }
+        #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, .no-print { display: none !important; }
+        #bill { box-shadow: none !important; border-radius: 0 !important; width: 198mm !important; margin: 0 !important; background: white !important; }
+        .preserve { display: block !important; border: 1px solid #ddd !important; padding: 6px 8px !important; border-radius: 6px !important; font-size: 11pt !important; margin-top: 4px !important; }
         textarea { display: none !important; }
-        h1 { font-size: 20pt !important; margin: 4pt 0 !important; }
-        .p-6 { padding: 8mm !important; }
-        .space-y-4 > * + * { margin-top: 6pt !important; }
-        .my-3 { margin: 4pt 0 !important; }
-        .pt-4 { padding-top: 6pt !important; }
-        .h-48 { height: 100px !important; } /* Signature box tighter */
+        h1 { font-size: 21pt !important; margin: 0 !important; }
+        .text-4xl { font-size: 21pt !important; }
+        .text-sm { font-size: 10pt !important; }
+        .space-y-4 > * + * { margin-top: 8px !important; }
+        .h-32 { height: 70px !important; }
     }
     .preserve { white-space: pre-line; display: none; }
     #signatureCanvas { touch-action: none; }
@@ -34,291 +32,208 @@
 </head>
 <body>
 
-<div class="pb-24"></div>
+<div class="pb-20"></div>
 
 <div id="app" class="max-w-4xl mx-auto p-4">
 
-    <div class="flex border-b mb-6">
-        <button id="tabBill" class="px-6 py-3 font-bold text-blue-600 border-b-4 border-blue-600">New Bill</button>
+    <!-- Tabs -->
+    <div class="flex border-b mb-5">
+        <button id="tabBill" class="px-6 py-3 font-bold text-blue-600 border-b-4 border-blue-600">New</button>
         <button id="tabHistory" class="px-6 py-3 font-bold text-gray-600">History (<span id="historyCount">0</span>)</button>
     </div>
 
-    <div id="billView">
-        <div id="controls" class="mb-5 flex flex-wrap items-center justify-between gap-4 no-print">
-            <div class="flex gap-3">
-                <button id="printBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg shadow">Print</button>
-                <button id="pdfBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-lg shadow">Save PDF</button>
-                <button id="newBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-5 rounded-lg shadow">New</button>
-            </div>
-            <div class="flex items-center gap-3 bg-gray-200 rounded-full p-1.5">
-                <span class="px-4 text-sm font-medium text-gray-600">NSP</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="modeToggle" class="sr-only peer" checked>
-                    <div class="w-14 h-8 bg-gray-400 rounded-full peer-checked:bg-blue-600 transition"></div>
-                    <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition peer-checked:translate-x-6"></div>
-                </label>
-                <span class="px-4 text-sm font-bold text-gray-700">BILL</span>
-            </div>
+    <!-- Controls -->
+    <div id="controls" class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex gap-2">
+            <button id="printBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg text-sm">Print</button>
+            <button id="pdfBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg text-sm">PDF</button>
+            <button id="newBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm">New</button>
         </div>
-
-        <div id="bill" class="bg-white rounded-xl overflow-hidden shadow-xl">
-            <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-6 text-center">
-                <h1 contenteditable="true" class="text-4xl font-bold outline-none leading-none">Odd Dog Locksmith</h1>
-                <p contenteditable="true" class="text-sm mt-2 outline-none">• Waterloo, NY •</p>
-                <p contenteditable="true" class="text-lg mt-1 outline-none">odd.dog.locks@gmail.com</p>
-            </div>
-
-            <div class="p-6 space-y-5 text-base">
-                <div class="grid grid-cols-2 gap-6">
-                    <div><strong>Invoice No:</strong> <span id="invoiceNo" class="ml-3 bg-gray-200 px-4 py-1 rounded font-mono font-bold text-blue-800">251130-001</span></div>
-                    <div><strong>Date:</strong> <input type="date" id="billDate" class="ml-3 border-b-2 border-gray-500 w-40" readonly></div>
-                </div>
-
-                <div>
-                    <strong>Customer Name & Address:</strong><br>
-                    <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded p-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
-                    <div id="customerPrint" class="preserve mt-1 text-sm"></div>
-                </div>
-
-                <div>
-                    <strong>Description of Work Performed:</strong><br>
-                    <textarea rows="6" id="description" class="w-full mt-1 border border-gray-300 rounded p-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
-                    <div id="descriptionPrint" class="preserve mt-1 text-sm"></div>
-                </div>
-
-                <div id="billingSection" class="border-t-2 border-dashed pt-4 text-sm">
-                    <div class="flex justify-between items-center mb-2">
-                        <strong>Itemized Charges</strong>
-                        <div class="text-sm">Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-16 text-right border rounded px-1"> %</div>
-                    </div>
-                    <table class="w-full">
-                        <tbody id="itemsTable" class="text-sm"></tbody>
-                        <tfoot class="border-t-2 border-gray-800">
-                            <tr><td colspan="2" class="text-right font-bold py-1">Subtotal:</td><td class="text-right font-bold" id="subtotal">$0.00</td></tr>
-                            <tr><td colspan="2" class="text-right py-1">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
-                            <tr class="border-t-2 border-double border-gray-800">
-                                <td colspan="2" class="text-right font-bold text-lg py-2">TOTAL DUE:</td>
-                                <td class="text-right font-bold text-2xl text-blue-700" id="totalDue">$0.00</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <div class="my-4 text-xs text-gray-700 text-center italic leading-tight border-t border-b py-3">
-                    By signing below, you confirm you are authorized to approve the work and accept all charges. You acknowledge the work was completed to your satisfaction and waive any claims arising from this service.
-                </div>
-
-                <div class="border-t-2 pt-4">
-                    <strong>Customer Signature:</strong>
-                    <div class="mt-3 border-2 border-dashed border-gray-500 rounded-lg bg-gray-50 h-48 relative">
-                        <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain absolute inset-0 m-auto" style="display:none;">
-                    </div>
-                    <div class="mt-4 flex gap-3 no-print">
-                        <button id="addSigBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded">Add Signature</button>
-                        <button id="clearSigBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded">Clear</button>
-                    </div>
-                </div>
-
-                <div class="text-center text-sm text-gray-600 pt-4 border-t">
-                    <p contenteditable="true" class="outline-none">Payment due on receipt • Thank you!</p>
-                </div>
-            </div>
+        <div class="flex bg-gray-200 rounded-full p-1 text-xs font-bold">
+            <button id="modeNSP" class="px-4 py-1.5 rounded-full">NSP</button>
+            <button id="modeBILL" class="px-4 py-1.5 rounded-full bg-blue-600 text-white">BILL</button>
+            <button id="modePROP" class="px-4 py-1.5 rounded-full">PROP</button>
         </div>
     </div>
 
-    <div id="historyView" class="hidden">
-        <input type="text" id="searchHistory" placeholder="Search customer, invoice, amount..." class="w-full p-3 border rounded-lg text-lg mb-4">
-        <div id="historyList" class="space-y-3"></div>
+    <!-- Bill -->
+    <div id="bill" class="bg-white rounded-xl shadow-xl overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-5 text-center">
+            <h1 contenteditable="true" class="text-4xl font-bold outline-none">Your Business Name</h1>
+            <p contenteditable="true" class="text-sm mt-1 outline-none">123 Main Street • City • State</p>
+            <p contenteditable="true" class="text-base outline-none">+91 98765 43210</p>
+        </div>
+
+        <div class="p-5 space-y-4 text-sm">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Invoice No:</strong> <span id="invoiceNo" class="ml-2 bg-gray-200 px-3 py-0.5 rounded font-mono font-bold text-blue-800">251130-001</span></div>
+                <div><strong>Date:</strong> <input type="date" id="billDate" class="ml-2 border-b-2 border-gray-400 w-32" readonly></div>
+            </div>
+
+            <div>
+                <strong>Customer:</strong><br>
+                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
+                <div id="customerPrint" class="preserve"></div>
+            </div>
+
+            <div id="descriptionTitle"><strong>Description of Work Performed:</strong></div>
+            <div>
+                <textarea rows="7" id="description" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
+                <div id="descriptionPrint" class="preserve"></div>
+            </div>
+
+            <div id="billingSection" class="border-t-2 border-dashed pt-3">
+                <div class="flex justify-between text-xs mb-1"><strong>Itemized Charges</strong> <span>Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-12 text-right border rounded px-1">%</span></div>
+                <table class="w-full text-xs"><tbody id="itemsTable"></tbody></table>
+                <table class="w-full mt-2 text-sm font-bold">
+                    <tr><td class="text-right">Subtotal:</td><td class="text-right w-28" id="subtotal">$0.00</td></tr>
+                    <tr><td class="text-right">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
+                    <tr class="border-t-2 border-double border-black"><td class="text-right text-base">TOTAL DUE:</td><td class="text-right text-xl text-blue-700" id="totalDue">$0.00</td></tr>
+                </table>
+            </div>
+
+            <div id="signatureSection" class="border-t pt-3 text-sm">
+                <strong>Customer Signature:</strong>
+                <div class="mt-2 border-2 border-dashed border-gray-400 rounded-lg bg-gray-50 h-32 relative flex items-center justify-center">
+                    <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain" style="display:none;">
+                    <span class="text-gray-400 text-xs" id="sigPlaceholder">Tap "Add Signature" to sign</span>
+                </div>
+                <div class="mt-2 flex gap-2 no-print">
+                    <button id="addSigBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded text-sm">Add Signature</button>
+                    <button id="clearSigBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-4 rounded text-sm">Clear</button>
+                </div>
+            </div>
+
+            <div class="text-center text-xs text-gray-600 pt-2 border-t">
+                <p contenteditable="true" class="outline-none">Payment due on receipt • Thank you!</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Signature Modal -->
 <div id="signatureModal" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50 p-4 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
-        <h3 class="text-2xl font-bold text-center mb-6">Sign Here</h3>
-        <canvas id="signatureCanvas" class="border-4 border-gray-800 rounded-xl bg-white w-full" height="400"></canvas>
-        <div class="mt-8 flex justify-center gap-4">
-            <button id="clearModalBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded">Clear</button>
-            <button id="cancelModalBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded">Cancel</button>
-            <button id="doneModalBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded">Done</button>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5">
+        <h3 class="text-xl font-bold text-center mb-4">Sign Below</h3>
+        <canvas id="signatureCanvas" class="border-2 border-gray-800 rounded-lg bg-white w-full" height="280"></canvas>
+        <div class="mt-4 flex justify-center gap-3">
+            <button id="clearModalBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded">Clear</button>
+            <button id="cancelModalBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded">Cancel</button>
+            <button id="doneModalBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded">Done</button>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // History (localStorage)
-    let historyData = JSON.parse(localStorage.getItem('billbook_history') || '[]');
-    const updateHistoryCount = () => document.getElementById('historyCount').textContent = historyData.length;
-    const saveHistory = () => localStorage.setItem('billbook_history', JSON.stringify(historyData));
-    const addToHistory = bill => { historyData.unshift(bill); if (historyData.length > 100) historyData.pop(); saveHistory(); updateHistoryCount(); };
-    const loadHistory = () => {
-        const list = document.getElementById('historyList');
-        list.innerHTML = historyData.map((b, i) => `
-            <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-                <div>
-                    <strong class="text-lg">${b.invoiceNo}</strong> • ${b.date}<br>
-                    <div class="text-gray-600">${b.customer.split('\n')[0] || 'No customer'}</div>
-                    <div class="font-bold text-blue-600">${b.total}</div>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="viewBill(${i})" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
-                    <button onclick="deleteBill(${i})" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
-                </div>
-            </div>
-        `).join('');
-    };
-    window.viewBill = i => {
-        document.getElementById('bill').innerHTML = historyData[i].html;
-        document.getElementById('controls').innerHTML = `<div class="text-center my-10"><button onclick="location.reload()" class="bg-gray-600 text-white px-8 py-4 rounded-lg text-lg">Back to New Bill</button></div>`;
-    };
-    window.deleteBill = i => {
-        if (confirm('Delete this bill permanently?')) {
-            historyData.splice(i, 1);
-            saveHistory();
-            loadHistory();
-        }
+    let currentMode = 'BILL';
+
+    const setMode = mode => {
+        currentMode = mode;
+        document.querySelectorAll('#modeNSP,#modeBILL,#modePROP').forEach(b => b.classList.remove('bg-blue-600','text-white'));
+        document.getElementById('mode'+mode).classList.add('bg-blue-600','text-white');
+        
+        document.getElementById('billingSection').style.display = (mode === 'NSP') ? 'none' : 'block';
+        document.getElementById('signatureSection').style.display = (mode === 'PROP') ? 'none' : 'block';
+        document.getElementById('descriptionTitle').innerHTML = (mode === 'PROP') 
+            ? '<strong class="text-2xl text-blue-800">Proposal</strong>' 
+            : '<strong>Description of Work Performed:</strong>';
+        updateBilling();
     };
 
-    // Tabs
-    document.getElementById('tabBill').onclick = () => {
-        document.getElementById('billView').classList.remove('hidden');
-        document.getElementById('historyView').classList.add('hidden');
-    };
-    document.getElementById('tabHistory').onclick = () => {
-        document.getElementById('billView').classList.add('hidden');
-        document.getElementById('historyView').classList.remove('hidden');
-        loadHistory();
-    };
+    document.getElementById('modeNSP').onclick = () => setMode('NSP');
+    document.getElementById('modeBILL').onclick = () => setMode('BILL');
+    document.getElementById('modePROP').onclick = () => setMode('PROP');
 
-    // Search
-    document.getElementById('searchHistory').oninput = e => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#historyList > div').forEach(div => div.style.display = div.textContent.toLowerCase().includes(term) ? '' : 'none');
-    };
-
-    // Invoice number
+    // Invoice & Date
     const today = new Date().toISOString().slice(2,10).replace(/-/g,'');
-    let counter = parseInt(localStorage.getItem('billbook_counter_' + today) || '0') + 1;
-    localStorage.setItem('billbook_counter_' + today, counter);
+    let counter = (parseInt(localStorage.getItem('billbook_counter_'+today)||0)) + 1;
+    localStorage.setItem('billbook_counter_'+today, counter);
     document.getElementById('invoiceNo').textContent = today + '-' + String(counter).padStart(3,'0');
     document.getElementById('billDate').valueAsDate = new Date();
 
-    // Sync text
+    // Sync + Billing
     const syncText = () => {
-        document.getElementById('customerPrint').textContent = document.getElementById('customer').value || '';
-        document.getElementById('descriptionPrint').textContent = document.getElementById('description').value || '';
+        document.getElementById('customerPrint').textContent = document.getElementById('customer').value;
+        document.getElementById('descriptionPrint').textContent = document.getElementById('description').value;
     };
-    document.getElementById('customer').addEventListener('input', syncText);
-    document.getElementById('description').addEventListener('input', syncText);
-    syncText();
-
-    // Billing
     const updateBilling = () => {
-        const lines = document.getElementById('description').value.split('\n').filter(l => l.trim());
-        const table = document.getElementById('itemsTable');
-        table.innerHTML = '';
+        if (currentMode === 'NSP') { document.getElementById('itemsTable').innerHTML = ''; ['subtotal','taxAmount','totalDue'].forEach(id => document.getElementById(id).textContent = '$0.00'); return; }
+        const lines = document.getElementById('description').value.split('\n');
+        const table = document.getElementById('itemsTable'); table.innerHTML = '';
         let subtotal = 0;
-        lines.forEach(line => {
-            const m = line.match(/[$₹£€]?\s*(\d+(?:\.\d{1,2})?)\b/i);
-            if (m) {
-                const amt = parseFloat(m[1]);
-                subtotal += amt;
-                table.innerHTML += `<tr><td colspan="2" class="py-1">${line.trim()}</td><td class="text-right font-medium">$${amt.toFixed(2)}</td></tr>`;
+        lines.forEach(l => {
+            const m = l.match(/[$₹£€]?\s*(\d+(?:\.\d{1,2})?)\b/i);
+            if (m) { const amt = parseFloat(m[1]); subtotal += amt;
+                table.innerHTML += `<tr><td class="py-0.5 pr-3">${l.trim()}</td><td class="text-right font-medium w-20">$${amt.toFixed(2)}</td></tr>`;
             }
         });
-        const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+        const taxRate = parseFloat(document.getElementById('taxRate').value)||0;
         document.getElementById('taxPercent').textContent = taxRate.toFixed(1);
         const tax = subtotal * taxRate / 100;
-        const total = subtotal + tax;
-        document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
-        document.getElementById('taxAmount').textContent = '$' + tax.toFixed(2);
-        document.getElementById('totalDue').textContent = '$' + total.toFixed(2);
+        document.getElementById('subtotal').textContent = '$'+subtotal.toFixed(2);
+        document.getElementById('taxAmount').textContent = '$'+tax.toFixed(2);
+        document.getElementById('totalDue').textContent = '$'+(subtotal+tax).toFixed(2);
     };
-    document.getElementById('description').addEventListener('input', updateBilling);
-    document.getElementById('taxRate').addEventListener('input', updateBilling);
-    document.getElementById('modeToggle').addEventListener('change', e => {
-        document.getElementById('billingSection').style.display = e.target.checked ? 'block' : 'none';
-        if (e.target.checked) updateBilling();
-    });
-    document.getElementById('modeToggle').dispatchEvent(new Event('change'));
 
-    // Signature (iOS-proof blob URL)
+    document.getElementById('customer').addEventListener('input', syncText);
+    document.getElementById('description').addEventListener('input', () => { syncText(); updateBilling(); });
+    document.getElementById('taxRate').addEventListener('input', updateBilling);
+
+    // Signature (iOS-proof)
     const modal = document.getElementById('signatureModal');
     const canvas = document.getElementById('signatureCanvas');
     const ctx = canvas.getContext('2d');
     const preview = document.getElementById('signaturePreview');
+    const placeholder = document.getElementById('sigPlaceholder');
     let drawing = false;
 
     const resizeCanvas = () => {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        ctx.putImageData(imageData, 0, 0);
+        const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        ctx.putImageData(img,0,0);
     };
     window.addEventListener('resize', resizeCanvas);
 
-    document.getElementById('addSigBtn').onclick = () => {
-        modal.classList.remove('hidden');
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        resizeCanvas();
-    };
-    document.getElementById('clearSigBtn').onclick = () => {
-        preview.src = '';
-        preview.style.display = 'none';
-    };
+    document.getElementById('addSigBtn').onclick = () => { modal.classList.remove('hidden'); ctx.clearRect(0,0,canvas.width,canvas.height); resizeCanvas(); };
+    document.getElementById('clearSigBtn').onclick = () => { preview.src = ''; preview.style.display = 'none'; placeholder.style.display = 'block'; };
     document.getElementById('clearModalBtn').onclick = () => ctx.clearRect(0,0,canvas.width,canvas.height);
     document.getElementById('cancelModalBtn').onclick = () => modal.classList.add('hidden');
-
     document.getElementById('doneModalBtn').onclick = () => {
-        canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            preview.src = url;
-            preview.style.display = 'block';
-            if (preview.dataset.blobUrl) URL.revokeObjectURL(preview.dataset.blobUrl);
-            preview.dataset.blobUrl = url;
+        canvas.toBlob(b => {
+            const url = URL.createObjectURL(b);
+            preview.src = url; preview.style.display = 'block'; placeholder.style.display = 'none';
+            if (preview.dataset.url) URL.revokeObjectURL(preview.dataset.url);
+            preview.dataset.url = url;
             modal.classList.add('hidden');
         }, 'image/png');
     };
 
-    // Drawing
     const getPos = e => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        return {x, y};
+        const r = canvas.getBoundingClientRect();
+        return { x: (e.touches?.[0]?.clientX || e.clientX) - r.left, y: (e.touches?.[0]?.clientY || e.clientY) - r.top };
     };
-    canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
-    canvas.addEventListener('mousemove', e => { if (drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.stroke(); }});
-    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.stroke(); }});
-    canvas.addEventListener('mouseup', () => drawing = false);
-    canvas.addEventListener('touchend', () => drawing = false);
+    ['mousedown','touchstart'].forEach(ev => canvas.addEventListener(ev, e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }));
+    ['mousemove','touchmove'].forEach(ev => canvas.addEventListener(ev, e => { e.preventDefault(); if(drawing){ const p = getPos(e); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke(); }}));
+    ['mouseup','touchend'].forEach(ev => canvas.addEventListener(ev, () => drawing = false));
 
-    // Save current bill
-    const saveCurrentBill = () => {
-        syncText();
-        addToHistory({
-            invoiceNo: document.getElementById('invoiceNo').textContent,
-            date: document.getElementById('billDate').value,
-            customer: document.getElementById('customer').value,
-            description: document.getElementById('description').value,
-            total: document.getElementById('totalDue').textContent,
-            signature: preview.src,
-            html: document.getElementById('bill').innerHTML
-        });
+    // Save & Buttons
+    const saveCurrent = () => { syncText(); 
+        const data = JSON.parse(localStorage.getItem('billbook_history')||'[]');
+        data.unshift({date: new Date().toISOString().slice(0,10), invoiceNo: document.getElementById('invoiceNo').textContent, total: document.getElementById('totalDue').textContent, mode: currentMode, html: document.getElementById('bill').innerHTML});
+        if(data.length>100) data.pop();
+        localStorage.setItem('billbook_history', JSON.stringify(data));
+        document.getElementById('historyCount').textContent = data.length;
     };
 
-    // Buttons
-    document.getElementById('printBtn').onclick = () => { syncText(); saveCurrentBill(); setTimeout(() => window.print(), 200); };
-    document.getElementById('pdfBtn').onclick = () => { syncText(); saveCurrentBill(); setTimeout(() => {
-        const type = document.getElementById('modeToggle').checked ? 'Bill' : 'NSP';
-        const no = document.getElementById('invoiceNo').textContent;
-        html2pdf().set({margin:5, filename:`${type}_${no}.pdf`, html2canvas:{scale:1.8}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save();
-    }, 300); };
-    document.getElementById('newBtn').onclick = () => { if (confirm('Start a new bill? Current one will be saved to History.')) location.reload(); };
+    document.getElementById('printBtn').onclick = () => { syncText(); saveCurrent(); setTimeout(() => window.print(), 150); };
+    document.getElementById('pdfBtn').onclick = () => { syncText(); saveCurrent(); setTimeout(() => {
+        const type = currentMode === 'PROP' ? 'Proposal' : currentMode;
+        html2pdf().set({margin:6, filename:`${type}_${document.getElementById('invoiceNo').textContent}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'}}).from(document.getElementById('bill')).save();
+    }, 200); };
+    document.getElementById('newBtn').onclick = () => { if(confirm('Start new? Current will be saved.')) location.reload(); };
 
-    updateHistoryCount();
+    setMode('BILL');
 });
 </script>
 </body>
