@@ -19,7 +19,7 @@
         #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, #tabBill, #tabHistory, .no-print { display: none !important; }
         #bill { box-shadow: none !important; border-radius: 0 !important; width: 198mm !important; margin: 0 !important; background: white !important; }
         .preserve { display: block !important; border: 1px solid #ddd !important; padding: 6px 8px !important; border-radius: 6px !important; font-size: 11pt !important; margin-top: 4px !important; }
-        textarea { display: none !important; }
+        textarea, input { display: none !important; }
         h1 { font-size: 21pt !important; margin: 0 !important; }
         .text-4xl { font-size: 21pt !important; }
         .text-sm { font-size: 10pt !important; }
@@ -70,9 +70,10 @@
                 <div><strong>Date:</strong> <input type="date" id="billDate" class="ml-2 border-b-2 border-gray-400 w-32" readonly></div>
             </div>
 
+            <!-- Customer Name & Address - Right-aligned text, normal typing -->
             <div>
                 <strong>Customer Name & Address:</strong><br>
-                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none text-right" style="direction: rtl;"></textarea>
+                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none text-right"></textarea>
                 <div id="customerPrint" class="preserve text-right"></div>
             </div>
 
@@ -92,11 +93,11 @@
                 </table>
             </div>
 
-            <!-- New Customer Name field (half width) -->
+            <!-- Customer Name field (half width, prints once) -->
             <div class="mt-4">
                 <strong>Customer Name:</strong><br>
-                <input type="text" id="customerName" class="w-1/2 mt-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-600 outline-none">
-                <div id="customerNamePrint" class="preserve mt-1 text-sm"></div>
+                <input type="text" id="customerName" placeholder="Printed name" class="w-1/2 mt-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-600 outline-none">
+                <div id="customerNamePrint" class="preserve mt-1 text-sm font-bold"></div>
             </div>
 
             <div id="signatureSection" class="border-t pt-3 text-sm">
@@ -159,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('invoiceNo').textContent = today + '-' + String(counter).padStart(3,'0');
     document.getElementById('billDate').valueAsDate = new Date();
 
-    // Sync text + new customer name
+    // Sync text (including new Customer Name field)
     const syncText = () => {
         document.getElementById('customerPrint').textContent = document.getElementById('customer').value;
         document.getElementById('descriptionPrint').textContent = document.getElementById('description').value;
@@ -211,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('clearSigBtn').onclick = () => { preview.src = ''; preview.style.display = 'none'; placeholder.style.display = 'block'; };
     document.getElementById('clearModalBtn').onclick = () => ctx.clearRect(0,0,canvas.width,canvas.height);
     document.getElementById('cancelModalBtn').onclick = () => modal.classList.add('hidden');
+
     document.getElementById('doneModalBtn').onclick = () => {
         canvas.toBlob(b => {
             const url = URL.createObjectURL(b);
