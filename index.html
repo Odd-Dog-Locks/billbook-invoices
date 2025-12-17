@@ -18,13 +18,15 @@
         body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, #tabBill, #tabHistory, .no-print { display: none !important; }
         #bill { box-shadow: none !important; border-radius: 0 !important; width: 198mm !important; margin: 0 !important; background: white !important; }
-        .preserve { display: block !important; border: 1px solid #ddd !important; padding: 6px 8px !important; border-radius: 6px !important; font-size: 11pt !important; margin-top: 4px !important; }
+        .preserve { display: block !important; border: none !important; padding: 0 !important; margin-top: 4px !important; font-size: 11pt !important; }
         textarea, input[type="text"], input[type="date"] { display: none !important; }
         h1 { font-size: 21pt !important; margin: 0 !important; }
         .text-4xl { font-size: 21pt !important; }
         .text-sm { font-size: 10pt !important; }
-        .space-y-5 > * + * { margin-top: 8px !important; }
-        .h-48 { height: 70px !important; }
+        .space-y-8 > * + * { margin-top: 18px !important; }
+        .my-6 { margin: 18px 0 !important; }
+        .pt-6 { padding-top: 18px !important; }
+        .h-48 { height: 80px !important; }
         #billDateDisplay { display: inline !important; }
     }
     .preserve { white-space: pre-line; display: none; }
@@ -59,13 +61,13 @@
 
     <!-- Bill -->
     <div id="bill" class="bg-white rounded-xl shadow-xl overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-5 text-center">
+        <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-6 text-center">
             <h1 contenteditable="true" class="text-4xl font-bold outline-none">Your Business Name</h1>
             <p contenteditable="true" class="text-sm mt-1 outline-none">123 Main Street • City • State</p>
             <p contenteditable="true" class="text-base outline-none">+91 98765 43210</p>
         </div>
 
-        <div class="p-5 space-y-5 text-sm">
+        <div class="p-6 space-y-8 text-sm">
             <div class="grid grid-cols-2 gap-4">
                 <div><strong>Invoice No:</strong> <span id="invoiceNo" class="ml-2 bg-gray-200 px-3 py-0.5 rounded font-mono font-bold text-blue-800">251130-001</span></div>
                 <div>
@@ -75,49 +77,54 @@
                 </div>
             </div>
 
-            <!-- Customer Address - right-aligned, normal typing -->
+            <!-- Customer Address - left-aligned -->
             <div>
                 <strong>Customer Name & Address:</strong><br>
-                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none text-right"></textarea>
-                <div id="customerPrint" class="preserve text-right"></div>
+                <textarea rows="3" id="customer" class="w-full mt-2 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
+                <div id="customerPrint" class="preserve mt-2 text-sm"></div>
             </div>
 
             <div id="descriptionTitle"><strong>Description of Work Performed:</strong></div>
             <div>
-                <textarea rows="7" id="description" class="w-full mt-1 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
-                <div id="descriptionPrint" class="preserve"></div>
+                <textarea rows="9" id="description" class="w-full mt-2 border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:border-blue-600 outline-none"></textarea>
+                <div id="descriptionPrint" class="preserve mt-2 text-sm"></div>
             </div>
 
-            <div id="billingSection" class="border-t-2 border-dashed pt-3">
-                <div class="flex justify-between text-xs mb-1"><strong>Itemized Charges</strong> <span>Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-12 text-right border rounded px-1">%</span></div>
+            <div id="billingSection" class="border-t-2 border-dashed pt-6">
+                <div class="flex justify-between text-xs mb-2"><strong>Itemized Charges</strong> <span>Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-12 text-right border rounded px-1">%</span></div>
                 <table class="w-full text-xs"><tbody id="itemsTable"></tbody></table>
-                <table class="w-full mt-2 text-sm font-bold">
+                <table class="w-full mt-3 text-sm font-bold">
                     <tr><td class="text-right">Subtotal:</td><td class="text-right w-28" id="subtotal">$0.00</td></tr>
                     <tr><td class="text-right">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
                     <tr class="border-t-2 border-double border-black"><td class="text-right text-base">TOTAL DUE:</td><td class="text-right text-xl text-blue-700" id="totalDue">$0.00</td></tr>
                 </table>
             </div>
 
-            <!-- Customer Name (half width, prints once) -->
-            <div class="mt-4">
-                <strong>Customer Name:</strong><br>
-                <input type="text" id="customerName" placeholder="Printed name" class="w-1/2 mt-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-600 outline-none">
-                <div id="customerNamePrint" class="preserve mt-1 text-sm font-bold"></div>
+            <div class="my-6 text-xs text-gray-700 text-center italic leading-tight border-t border-b py-3">
+                By signing below, you confirm you are authorized to approve the work and accept all charges. You acknowledge the work was completed to your satisfaction and waive any claims arising from this service.
             </div>
 
-            <div id="signatureSection" class="border-t pt-3 text-sm">
+            <!-- Customer Name - now BELOW the border -->
+            <div class="my-6">
+                <strong>Customer Name:</strong><br>
+                <input type="text" id="customerName" placeholder="Printed name" class="w-1/4 mt-2 border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-600 outline-none">
+                <div id="customerNamePrint" class="preserve mt-2 text-sm font-bold"></div>
+            </div>
+
+            <!-- Signature Section - also BELOW the border -->
+            <div id="signatureSection" class="pt-6 text-sm">
                 <strong>Customer Signature:</strong>
-                <div class="mt-2 border-2 border-dashed border-gray-400 rounded-lg bg-gray-50 h-32 relative flex items-center justify-center">
+                <div class="mt-3 border-2 border-dashed border-gray-400 rounded-lg bg-gray-50 h-48 relative flex items-center justify-center">
                     <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain" style="display:none;">
                     <span class="text-gray-400 text-xs" id="sigPlaceholder">Tap "Add Signature" to sign</span>
                 </div>
-                <div class="mt-2 flex gap-2 no-print">
+                <div class="mt-3 flex gap-2 no-print">
                     <button id="addSigBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded text-sm">Add Signature</button>
                     <button id="clearSigBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-4 rounded text-sm">Clear</button>
                 </div>
             </div>
 
-            <div class="text-center text-xs text-gray-600 pt-2 border-t">
+            <div class="text-center text-xs text-gray-600 pt-4 border-t">
                 <p contenteditable="true" class="outline-none">Payment due on receipt • Thank you!</p>
             </div>
         </div>
@@ -168,10 +175,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const billDateInput = document.getElementById('billDate');
     const billDateDisplay = document.getElementById('billDateDisplay');
     billDateInput.valueAsDate = new Date();
-    billDateDisplay.textContent = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    billDateInput.addEventListener('change', () => {
-        billDateDisplay.textContent = billDateInput.value || new Date().toLocaleDateString('en-CA');
-    });
+    billDateDisplay.textContent = new Date().toLocaleDateString('en-CA');
+    billDateInput.addEventListener('change', () => billDateDisplay.textContent = billDateInput.value || new Date().toLocaleDateString('en-CA'));
 
     // Sync text
     const syncText = () => {
