@@ -32,7 +32,7 @@
         #totalDue { font-size: 12pt !important; }
         #billDateDisplay { display: inline !important; }
         .remove-btn { display: none !important; }
-        .h-48 { height: 50px !important; } /* Super compact signature in print */
+        .h-48 { height: 50px !important; }
         .my-2 { margin: 4px 0 !important; }
         .pt-2 { padding-top: 4px !important; }
     }
@@ -67,87 +67,97 @@
         </div>
     </div>
 
-    <!-- Bill -->
-    <div id="bill" class="bg-white rounded-xl shadow-xl overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 text-center">
-            <h1 contenteditable="true" class="text-4xl font-bold outline-none">Odd Dog Locksmith</h1>
-            <p contenteditable="true" class="text-sm mt-1 outline-none"> • Waterloo, NY • </p>
-            <p contenteditable="true" class="text-base outline-none">odd.dog.locks@gmail.com</p>
-        </div>
+    <!-- Bill View -->
+    <div id="billView">
+        <div id="bill" class="bg-white rounded-xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 text-center">
+                <h1 contenteditable="true" class="text-4xl font-bold outline-none">Your Business Name</h1>
+                <p contenteditable="true" class="text-sm mt-1 outline-none">123 Main Street • City • State</p>
+                <p contenteditable="true" class="text-base outline-none">+91 98765 43210</p>
+            </div>
 
-        <div class="p-4 space-y-2 text-sm">
-            <div class="grid grid-cols-2 gap-4">
-                <div><strong>Invoice No:</strong> <span id="invoiceNo" class="ml-2 bg-gray-200 px-3 py-0.5 rounded font-mono font-bold text-blue-800">251130-001</span></div>
+            <div class="p-4 space-y-2 text-sm">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><strong>Invoice No:</strong> <span id="invoiceNo" class="ml-2 bg-gray-200 px-3 py-0.5 rounded font-mono font-bold text-blue-800">251130-001</span></div>
+                    <div>
+                        <strong>Date:</strong>
+                        <input type="date" id="billDate" class="ml-3 border-b-2 border-gray-500 w-36 no-print">
+                        <span id="billDateDisplay" class="ml-3"></span>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
                 <div>
-                    <strong>Date:</strong>
-                    <input type="date" id="billDate" class="ml-3 border-b-2 border-gray-500 w-36 no-print">
-                    <span id="billDateDisplay" class="ml-3"></span>
+                    <strong>Customer Name & Address:</strong>
+                    <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-1 text-sm resize-none focus:border-blue-600 outline-none no-print"></textarea>
+                    <div id="customerPrint" class="preserve mt-1 text-sm"></div>
                 </div>
-            </div>
 
-            <div class="section-divider"></div>
+                <div class="section-divider"></div>
 
-            <div>
-                <strong>Customer Name & Address:</strong>
-                <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-1 text-sm resize-none focus:border-blue-600 outline-none no-print"></textarea>
-                <div id="customerPrint" class="preserve mt-1 text-sm"></div>
-            </div>
-
-            <div class="section-divider"></div>
-
-            <div id="descriptionTitle"><strong>Description of Work Performed:</strong></div>
-            <div>
-                <textarea rows="7" id="description" class="w-full mt-1 border border-gray-300 rounded px-3 py-1 text-sm resize-none focus:border-blue-600 outline-none no-print"></textarea>
-                <div id="descriptionPrint" class="preserve mt-1 text-sm"></div>
-            </div>
-
-            <div id="billingSection" class="section-divider pt-2">
-                <div class="flex justify-between items-center mb-1">
-                    <strong>Itemized Charges</strong>
-                    <span class="text-xs">Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-12 text-right border rounded px-1 no-print">%</span>
+                <div id="descriptionTitle"><strong>Description of Work Performed:</strong></div>
+                <div>
+                    <textarea rows="7" id="description" class="w-full mt-1 border border-gray-300 rounded px-3 py-1 text-sm resize-none focus:border-blue-600 outline-none no-print"></textarea>
+                    <div id="descriptionPrint" class="preserve mt-1 text-sm"></div>
                 </div>
-                <table class="w-full text-sm">
-                    <tbody id="itemsTable"></tbody>
-                </table>
-                <table class="w-full mt-2 text-sm">
-                    <tr><td class="text-right pr-12">Subtotal:</td><td class="text-right w-32" id="subtotal">$0.00</td></tr>
-                    <tr><td class="text-right pr-12">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
-                    <tr class="total-row"><td class="text-right pr-12 text-base">TOTAL DUE:</td><td class="text-right text-xl text-blue-700" id="totalDue">$0.00</td></tr>
-                </table>
-            </div>
 
-            <div class="my-2 text-xs text-gray-700 text-center italic leading-tight section-divider pb-2">
-                By signing below, you confirm you are authorized to approve the work and accept all charges. You acknowledge the work was completed to your satisfaction and waive any claims arising from this service.
-            </div>
+                <div id="billingSection" class="section-divider pt-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <strong>Itemized Charges</strong>
+                        <span class="text-xs">Tax: <input type="number" id="taxRate" value="8" min="0" max="30" step="0.1" class="w-12 text-right border rounded px-1 no-print">%</span>
+                    </div>
+                    <table class="w-full text-sm">
+                        <tbody id="itemsTable"></tbody>
+                    </table>
+                    <table class="w-full mt-2 text-sm">
+                        <tr><td class="text-right pr-12">Subtotal:</td><td class="text-right w-32" id="subtotal">$0.00</td></tr>
+                        <tr><td class="text-right pr-12">Tax (<span id="taxPercent">8.0</span>%):</td><td class="text-right" id="taxAmount">$0.00</td></tr>
+                        <tr class="total-row"><td class="text-right pr-12 text-base">TOTAL DUE:</td><td class="text-right text-xl text-blue-700" id="totalDue">$0.00</td></tr>
+                    </table>
+                </div>
 
-            <div id="customerNameSection" class="my-2 relative">
-                <div class="flex items-center justify-between">
-                    <strong>Customer Name:</strong>
-                    <span class="remove-btn no-print" id="removeCustomerName">×</span>
+                <div class="my-2 text-xs text-gray-700 text-center italic leading-tight section-divider pb-2">
+                    By signing below, you confirm you are authorized to approve the work and accept all charges. You acknowledge the work was completed to your satisfaction and waive any claims arising from this service.
                 </div>
-                <input type="text" id="customerName" placeholder="Printed name" class="w-1/4 mt-1 border border-gray-300 rounded px-3 py-1 text-sm focus:border-blue-600 outline-none">
-                <div id="customerNamePrint" class="preserve mt-1 text-sm font-bold"></div>
-            </div>
 
-            <div id="signatureSection" class="my-2 text-sm relative">
-                <div class="flex items-center justify-between">
-                    <strong>Customer Signature:</strong>
-                    <span class="remove-btn no-print" id="removeSignature">×</span>
+                <div id="customerNameSection" class="my-2 relative">
+                    <div class="flex items-center justify-between">
+                        <strong>Customer Name:</strong>
+                        <span class="remove-btn no-print" id="removeCustomerName">×</span>
+                    </div>
+                    <input type="text" id="customerName" placeholder="Printed name" class="w-1/4 mt-1 border border-gray-300 rounded px-3 py-1 text-sm focus:border-blue-600 outline-none">
+                    <div id="customerNamePrint" class="preserve mt-1 text-sm font-bold"></div>
                 </div>
-                <div class="mt-2 border-2 border-dashed border-gray-400 rounded-lg bg-gray-50 h-48 relative flex items-center justify-center">
-                    <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain" style="display:none;">
-                    <span class="text-gray-400 text-xs" id="sigPlaceholder">Tap "Add Signature" to sign</span>
-                </div>
-                <div class="mt-2 flex gap-2 no-print">
-                    <button id="addSigBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded text-sm">Add Signature</button>
-                    <button id="clearSigBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-4 rounded text-sm">Clear</button>
-                </div>
-            </div>
 
-            <div class="text-center text-xs text-gray-600 pt-2">
-                <p contenteditable="true" class="outline-none">Payment due on receipt • Thank you!</p>
+                <div id="signatureSection" class="my-2 text-sm relative">
+                    <div class="flex items-center justify-between">
+                        <strong>Customer Signature:</strong>
+                        <span class="remove-btn no-print" id="removeSignature">×</span>
+                    </div>
+                    <div class="mt-2 border-2 border-dashed border-gray-400 rounded-lg bg-gray-50 h-48 relative flex items-center justify-center">
+                        <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain" style="display:none;">
+                        <span class="text-gray-400 text-xs" id="sigPlaceholder">Tap "Add Signature" to sign</span>
+                    </div>
+                    <div class="mt-2 flex gap-2 no-print">
+                        <button id="addSigBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded text-sm">Add Signature</button>
+                        <button id="clearSigBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-4 rounded text-sm">Clear</button>
+                    </div>
+                </div>
+
+                <div class="text-center text-xs text-gray-600 pt-2">
+                    <p contenteditable="true" class="outline-none">Payment due on receipt • Thank you!</p>
+                </div>
             </div>
         </div>
+    </div>
+
+    <!-- History View -->
+    <div id="historyView" class="hidden">
+        <div class="mb-4">
+            <input type="text" id="searchHistory" placeholder="Search customer, invoice, amount..." class="w-full p-3 border rounded-lg text-lg">
+        </div>
+        <div id="historyList" class="space-y-3"></div>
     </div>
 </div>
 
@@ -168,11 +178,67 @@
 document.addEventListener('DOMContentLoaded', function () {
     let currentMode = 'BILL';
 
+    // History
+    let historyData = JSON.parse(localStorage.getItem('billbook_history') || '[]');
+    const updateHistoryCount = () => document.getElementById('historyCount').textContent = historyData.length;
+    const saveHistory = () => localStorage.setItem('billbook_history', JSON.stringify(historyData));
+    const addToHistory = bill => { historyData.unshift(bill); if (historyData.length > 100) historyData.pop(); saveHistory(); updateHistoryCount(); };
+    const loadHistory = () => {
+        const list = document.getElementById('historyList');
+        list.innerHTML = historyData.map((b, i) => `
+            <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <strong class="text-lg">${b.invoiceNo}</strong> • ${b.date}
+                    <div class="text-gray-600">${b.customer ? b.customer.split('\n')[0] : 'No customer'}</div>
+                    <div class="font-bold text-blue-600">${b.total}</div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="viewBill(${i})" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
+                    <button onclick="deleteBill(${i})" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    };
+    window.viewBill = i => {
+        const b = historyData[i];
+        document.getElementById('bill').innerHTML = b.html;
+        document.getElementById('controls').innerHTML = `<div class="text-center my-8"><button onclick="location.reload()" class="bg-gray-600 text-white px-8 py-4 rounded-lg text-lg">Back to New Bill</button></div>`;
+        document.getElementById('billView').classList.remove('hidden');
+        document.getElementById('historyView').classList.add('hidden');
+    };
+    window.deleteBill = i => {
+        if (confirm('Delete this bill permanently?')) {
+            historyData.splice(i, 1);
+            saveHistory();
+            loadHistory();
+            updateHistoryCount();
+        }
+    };
+
+    // Tabs
+    document.getElementById('tabBill').onclick = () => {
+        document.getElementById('billView').classList.remove('hidden');
+        document.getElementById('historyView').classList.add('hidden');
+    };
+    document.getElementById('tabHistory').onclick = () => {
+        document.getElementById('billView').classList.add('hidden');
+        document.getElementById('historyView').classList.remove('hidden');
+        loadHistory();
+    };
+
+    // Search
+    document.getElementById('searchHistory').oninput = e => {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('#historyList > div').forEach(div => {
+            div.style.display = div.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    };
+
+    // Mode toggle
     const setMode = mode => {
         currentMode = mode;
         document.querySelectorAll('#modeNSP,#modeBILL,#modePROP').forEach(b => b.classList.remove('bg-blue-600','text-white'));
         document.getElementById('mode'+mode).classList.add('bg-blue-600','text-white');
-        
         document.getElementById('billingSection').style.display = (mode === 'NSP') ? 'none' : 'block';
         document.getElementById('signatureSection').style.display = (mode === 'PROP') ? 'none' : 'block';
         document.getElementById('descriptionTitle').innerHTML = (mode === 'PROP') 
@@ -180,7 +246,6 @@ document.addEventListener('DOMContentLoaded', function () {
             : '<strong>Description of Work Performed:</strong>';
         updateBilling();
     };
-
     document.getElementById('modeNSP').onclick = () => setMode('NSP');
     document.getElementById('modeBILL').onclick = () => setMode('BILL');
     document.getElementById('modePROP').onclick = () => setMode('PROP');
@@ -191,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
     localStorage.setItem('billbook_counter_'+today, counter);
     document.getElementById('invoiceNo').textContent = today + '-' + String(counter).padStart(3,'0');
 
-    // Date - visible in print
+    // Date
     const billDateInput = document.getElementById('billDate');
     const billDateDisplay = document.getElementById('billDateDisplay');
     billDateInput.valueAsDate = new Date();
@@ -244,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('sigPlaceholder').style.display = 'block';
     };
 
-    // Signature (iOS-proof)
+    // Signature
     const modal = document.getElementById('signatureModal');
     const canvas = document.getElementById('signatureCanvas');
     const ctx = canvas.getContext('2d');
@@ -285,10 +350,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Save & Buttons
     const saveCurrent = () => { syncText(); 
         const data = JSON.parse(localStorage.getItem('billbook_history')||'[]');
-        data.unshift({date: new Date().toISOString().slice(0,10), invoiceNo: document.getElementById('invoiceNo').textContent, total: document.getElementById('totalDue').textContent, mode: currentMode, html: document.getElementById('bill').innerHTML});
+        data.unshift({
+            date: new Date().toISOString().slice(0,10),
+            invoiceNo: document.getElementById('invoiceNo').textContent,
+            total: document.getElementById('totalDue').textContent,
+            customer: document.getElementById('customer').value,
+            mode: currentMode,
+            html: document.getElementById('bill').innerHTML
+        });
         if(data.length>100) data.pop();
         localStorage.setItem('billbook_history', JSON.stringify(data));
-        document.getElementById('historyCount').textContent = data.length;
+        updateHistoryCount();
     };
 
     document.getElementById('printBtn').onclick = () => { syncText(); saveCurrent(); setTimeout(() => window.print(), 150); };
@@ -298,6 +370,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 200); };
     document.getElementById('newBtn').onclick = () => { if(confirm('Start new? Current will be saved.')) location.reload(); };
 
+    updateHistoryCount();
     setMode('BILL');
 });
 </script>
