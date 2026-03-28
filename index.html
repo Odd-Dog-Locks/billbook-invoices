@@ -7,9 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Book">
-<!-- FIX: corrected %1e40af -> %231e40af (was missing the '23' = '#' URL encoding) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e40af'/><text y='60' font-size='50' text-anchor='middle' x='50' fill='white'>Bill</text></svg>">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
@@ -17,7 +15,7 @@
     @media print {
         @page { margin: 5mm !important; size: A4 portrait; }
         body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #app > div:first-child, #controls, #modeToggleContainer, #signatureModal, #historyView, #tabBill, #tabHistory, .no-print { display: none !important; }
+        #app > div:first-child, #controls, #signatureModal, #historyView, #historyDetailView, #tabBill, #tabHistory, .no-print { display: none !important; }
         #bill { box-shadow: none !important; border-radius: 0 !important; width: 200mm !important; margin: 0 !important; background: white !important; }
         .preserve { display: block !important; border: none !important; padding: 0 !important; margin-top: 4px !important; font-size: 10pt !important; line-height: 1.3; }
         textarea, input { display: none !important; }
@@ -27,7 +25,7 @@
         .space-y-2 > * + * { margin-top: 6px !important; }
         .section-divider { border-bottom: 1px solid #d1d5db !important; margin: 8px 0 !important; }
         #itemsTable tr:nth-child(even) { background-color: #f9fafb !important; }
-        #itemsTable td { border-bottom: 1px solid #e5e7eb !important; padding: 4px 4px !important; }
+        #itemsTable td { border-bottom: 1px solid #e5e7eb !important; padding: 4px !important; }
         #itemsTable td:last-child { text-align: right !important; }
         .total-row td { font-weight: bold !important; border-top: 2px double #000 !important; padding-top: 6px !important; }
         #totalDue { font-size: 12pt !important; }
@@ -71,8 +69,8 @@
         <div id="bill" class="bg-white rounded-xl shadow-xl overflow-hidden">
             <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 text-center">
                 <h1 contenteditable="true" class="text-4xl font-bold outline-none">Odd Dog Locksmith</h1>
-                <p contenteditable="true" class="text-sm mt-1 outline-none"> • Waterloo, NY • </p>
-                <p contenteditable="true" class="text-base outline-none">odd.dog.locks@gmail.com</p>
+                <p contenteditable="true" class="text-sm mt-1 outline-none"> &bull; Waterloo, NY &bull; </p>
+                <p contenteditable="true" class="text-base outline-none">odd.dog.locks&#64;gmail.com</p>
             </div>
 
             <div class="p-4 space-y-2 text-sm">
@@ -88,7 +86,7 @@
                 <div class="section-divider"></div>
 
                 <div>
-                    <strong>Customer Name & Address:</strong>
+                    <strong>Customer Name &amp; Address:</strong>
                     <textarea rows="2" id="customer" class="w-full mt-1 border border-gray-300 rounded px-3 py-1 text-sm resize-none focus:border-blue-600 outline-none no-print"></textarea>
                     <div id="customerPrint" class="preserve mt-1 text-sm"></div>
                 </div>
@@ -123,7 +121,7 @@
                 <div id="customerNameSection" class="my-2 relative">
                     <div class="flex items-center justify-between">
                         <strong>Customer Name:</strong>
-                        <span class="remove-btn no-print" id="removeCustomerName">×</span>
+                        <span class="remove-btn no-print" id="removeCustomerName">&times;</span>
                     </div>
                     <input type="text" id="customerName" placeholder="Printed name" class="w-1/4 mt-1 border border-gray-300 rounded px-3 py-1 text-sm focus:border-blue-600 outline-none">
                     <div id="customerNamePrint" class="preserve mt-1 text-sm font-bold"></div>
@@ -132,7 +130,7 @@
                 <div id="signatureSection" class="my-2 text-sm relative">
                     <div class="flex items-center justify-between">
                         <strong>Customer Signature:</strong>
-                        <span class="remove-btn no-print" id="removeSignature">×</span>
+                        <span class="remove-btn no-print" id="removeSignature">&times;</span>
                     </div>
                     <div class="mt-2 border-2 border-dashed border-gray-400 rounded-lg bg-gray-50 h-48 relative flex items-center justify-center">
                         <img id="signaturePreview" src="" class="max-w-full max-h-full object-contain" style="display:none;">
@@ -145,7 +143,7 @@
                 </div>
 
                 <div class="text-center text-xs text-gray-600 pt-2">
-                    <p contenteditable="true" class="outline-none">Payment due on receipt • Thank you!</p>
+                    <p contenteditable="true" class="outline-none">Payment due on receipt &bull; Thank you!</p>
                 </div>
             </div>
         </div>
@@ -160,15 +158,10 @@
         <p id="historyEmpty" class="text-center text-gray-400 py-10 text-sm hidden">No invoices saved yet. Print or export a bill to save it here.</p>
     </div>
 
-    <!--
-        History Detail View — shown when "View" is tapped on a history entry.
-        FIX: replaces the old approach of overwriting #bill.innerHTML (which
-        destroyed all live event listeners and required location.reload() to recover).
-        Saved HTML is rendered here in an isolated read-only shell instead.
-    -->
+    <!-- History Detail View -->
     <div id="historyDetailView" class="hidden">
         <div class="mb-4 no-print">
-            <button id="backToHistoryBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-lg text-sm">← Back to History</button>
+            <button id="backToHistoryBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-lg text-sm">&larr; Back to History</button>
         </div>
         <div id="historyBillShell" class="bg-white rounded-xl shadow-xl overflow-hidden text-sm"></div>
     </div>
@@ -190,125 +183,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    let currentMode = 'BILL';
+    var currentMode = 'BILL';
 
-    // ── History helpers — single source of truth ─────────────────────────────
-    // FIX: The original code maintained a separate in-memory `historyData` array
-    // that was loaded once at startup. But saveCurrent() wrote directly to
-    // localStorage without updating historyData, so loadHistory() always rendered
-    // stale data — new saves never appeared in the list until a full page reload.
-    // All reads and writes now go through these two helpers so they stay in sync.
-    const getHistory = () => JSON.parse(localStorage.getItem('billbook_history') || '[]');
-    const setHistory = data => localStorage.setItem('billbook_history', JSON.stringify(data));
-    const updateHistoryCount = () => {
-        document.getElementById('historyCount').textContent = getHistory().length;
-    };
-
-    // ── Save current bill to history ─────────────────────────────────────────
-    const saveCurrent = () => {
-        syncText();
-
-        // FIX: Signature was stored as a blob: URL (from canvas.toBlob +
-        // URL.createObjectURL). Blob URLs are session-scoped — they expire on
-        // page reload and are sandboxed per-tab on iOS Safari, making them
-        // unreliable even within the same session. We now use canvas.toDataURL()
-        // to produce a base64 PNG directly (see doneModalBtn handler below), so
-        // by the time we save, preview.src is already a stable data-URL.
-        // As a safety net we also convert any lingering blob: URLs here.
-        const sigImg = document.getElementById('signaturePreview');
-        let sigDataURL = null;
-        if (sigImg && sigImg.style.display !== 'none' && sigImg.src && !sigImg.src.startsWith('data:') && sigImg.src !== window.location.href) {
-            // Fallback: draw blob: img onto a temp canvas and export
-            try {
-                const tmp = document.createElement('canvas');
-                tmp.width  = sigImg.naturalWidth  || 400;
-                tmp.height = sigImg.naturalHeight || 150;
-                tmp.getContext('2d').drawImage(sigImg, 0, 0);
-                sigDataURL = tmp.toDataURL('image/png');
-            } catch (e) { /* tainted canvas — skip */ }
-        } else if (sigImg && sigImg.src.startsWith('data:')) {
-            sigDataURL = sigImg.src;
-        }
-
-        // Clone bill DOM so we can swap the img src without touching the live form
-        const billClone = document.getElementById('bill').cloneNode(true);
-        const clonedImg = billClone.querySelector('#signaturePreview');
-        if (clonedImg) {
-            if (sigDataURL) {
-                clonedImg.src = sigDataURL;
-                clonedImg.style.display = 'block';
-            } else {
-                clonedImg.src = '';
-                clonedImg.style.display = 'none';
-            }
-        }
-
-        const data = getHistory();
-        data.unshift({
-            date:      new Date().toISOString().slice(0, 10),
-            invoiceNo: document.getElementById('invoiceNo').textContent,
-            total:     document.getElementById('totalDue').textContent,
-            customer:  document.getElementById('customer').value,
-            mode:      currentMode,
-            html:      billClone.innerHTML
-        });
-        if (data.length > 100) data.pop();
-        setHistory(data);
-        updateHistoryCount();
-    };
-
-    // ── Render history list ───────────────────────────────────────────────────
-    const loadHistory = () => {
-        const data  = getHistory();
-        const list  = document.getElementById('historyList');
-        const empty = document.getElementById('historyEmpty');
-
-        if (data.length === 0) {
-            list.innerHTML = '';
-            empty.classList.remove('hidden');
-            return;
-        }
-        empty.classList.add('hidden');
-        list.innerHTML = data.map((b, i) => `
-            <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-                <div>
-                    <strong class="text-lg">${b.invoiceNo}</strong> • ${b.date}
-                    <div class="text-gray-600">${b.customer ? b.customer.split('\n')[0] : 'No customer'}</div>
-                    <div class="font-bold text-blue-600">${b.total}</div>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="viewBill(${i})" class="bg-blue-600 text-white px-4 py-2 rounded">View</button>
-                    <button onclick="deleteBill(${i})" class="bg-red-600 text-white px-4 py-2 rounded">Delete</button>
-                </div>
-            </div>
-        `).join('');
-    };
-
-    // ── View a saved bill ─────────────────────────────────────────────────────
-    // FIX: Original viewBill() overwrote #bill.innerHTML with saved HTML, which
-    // wiped all the live event listeners on the form. Going back required
-    // location.reload(), which also wiped any in-progress bill on the New tab.
-    // Now we render into a separate read-only shell (#historyBillShell) and
-    // switch views without touching the live bill or reloading the page.
-    window.viewBill = i => {
-        const b = getHistory()[i];
-        document.getElementById('historyBillShell').innerHTML = b.html || '';
-        showView('detail');
-    };
-
-    window.deleteBill = i => {
-        if (!confirm('Delete this bill permanently?')) return;
-        const data = getHistory();
-        data.splice(i, 1);
-        setHistory(data);
-        loadHistory();
-        updateHistoryCount();
-    };
-
-    document.getElementById('backToHistoryBtn').onclick = () => showView('history');
+    // ── History helpers ───────────────────────────────────────────────────────
+    function getHistory() { return JSON.parse(localStorage.getItem('billbook_history') || '[]'); }
+    function setHistory(data) { localStorage.setItem('billbook_history', JSON.stringify(data)); }
+    function updateHistoryCount() { document.getElementById('historyCount').textContent = getHistory().length; }
 
     // ── View switcher ─────────────────────────────────────────────────────────
-    const showView = view => {
+    function showView(view) {
         document.getElementById('billView').classList.add('hidden');
         document.getElementById('historyView').classList.add('hidden');
         document.getElementById('historyDetailView').classList.add('hidden');
@@ -331,198 +214,295 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (view === 'detail') {
             document.getElementById('historyDetailView').classList.remove('hidden');
         }
-    };
+    }
 
     // ── Tabs ──────────────────────────────────────────────────────────────────
-    document.getElementById('tabBill').onclick    = () => showView('bill');
-    document.getElementById('tabHistory').onclick = () => showView('history');
+    document.getElementById('tabBill').addEventListener('click', function() { showView('bill'); });
+    document.getElementById('tabHistory').addEventListener('click', function() { showView('history'); });
+    document.getElementById('backToHistoryBtn').addEventListener('click', function() { showView('history'); });
 
     // ── Search ────────────────────────────────────────────────────────────────
-    document.getElementById('searchHistory').oninput = e => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#historyList > div').forEach(div => {
-            div.style.display = div.textContent.toLowerCase().includes(term) ? '' : 'none';
-        });
-    };
+    document.getElementById('searchHistory').addEventListener('input', function() {
+        var term = this.value.toLowerCase();
+        var cards = document.querySelectorAll('#historyList > div');
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].style.display = cards[i].textContent.toLowerCase().indexOf(term) >= 0 ? '' : 'none';
+        }
+    });
+
+    // ── Load history list ─────────────────────────────────────────────────────
+    function loadHistory() {
+        var data = getHistory();
+        var list = document.getElementById('historyList');
+        var empty = document.getElementById('historyEmpty');
+        if (data.length === 0) {
+            list.innerHTML = '';
+            empty.classList.remove('hidden');
+            return;
+        }
+        empty.classList.add('hidden');
+        var html = '';
+        for (var i = 0; i < data.length; i++) {
+            var b = data[i];
+            var customer = b.customer ? b.customer.split('\n')[0] : 'No customer';
+            html += '<div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">';
+            html += '<div>';
+            html += '<strong class="text-lg">' + b.invoiceNo + '</strong> &bull; ' + b.date;
+            html += '<div class="text-gray-600">' + customer + '</div>';
+            html += '<div class="font-bold text-blue-600">' + b.total + '</div>';
+            html += '</div>';
+            html += '<div class="flex gap-2">';
+            html += '<button class="bg-blue-600 text-white px-4 py-2 rounded view-btn" data-index="' + i + '">View</button>';
+            html += '<button class="bg-red-600 text-white px-4 py-2 rounded delete-btn" data-index="' + i + '">Delete</button>';
+            html += '</div>';
+            html += '</div>';
+        }
+        list.innerHTML = html;
+
+        // Attach click handlers using data attributes instead of inline onclick
+        var viewBtns = list.querySelectorAll('.view-btn');
+        for (var v = 0; v < viewBtns.length; v++) {
+            viewBtns[v].addEventListener('click', function() {
+                var idx = parseInt(this.getAttribute('data-index'));
+                var b = getHistory()[idx];
+                document.getElementById('historyBillShell').innerHTML = b.html || '';
+                showView('detail');
+            });
+        }
+        var deleteBtns = list.querySelectorAll('.delete-btn');
+        for (var d = 0; d < deleteBtns.length; d++) {
+            deleteBtns[d].addEventListener('click', function() {
+                if (!confirm('Delete this bill permanently?')) return;
+                var idx = parseInt(this.getAttribute('data-index'));
+                var data = getHistory();
+                data.splice(idx, 1);
+                setHistory(data);
+                updateHistoryCount();
+                loadHistory();
+            });
+        }
+    }
 
     // ── Mode toggle ───────────────────────────────────────────────────────────
-    const setMode = mode => {
+    function setMode(mode) {
         currentMode = mode;
-        document.querySelectorAll('#modeNSP,#modeBILL,#modePROP').forEach(b => b.classList.remove('bg-blue-600','text-white'));
-        document.getElementById('mode'+mode).classList.add('bg-blue-600','text-white');
-        document.getElementById('billingSection').style.display   = (mode === 'NSP')  ? 'none' : 'block';
+        var btns = document.querySelectorAll('#modeNSP,#modeBILL,#modePROP');
+        for (var i = 0; i < btns.length; i++) { btns[i].classList.remove('bg-blue-600','text-white'); }
+        document.getElementById('mode' + mode).classList.add('bg-blue-600','text-white');
+        document.getElementById('billingSection').style.display  = (mode === 'NSP')  ? 'none' : 'block';
         document.getElementById('signatureSection').style.display = (mode === 'PROP') ? 'none' : 'block';
         document.getElementById('descriptionTitle').innerHTML = (mode === 'PROP')
             ? '<strong class="text-2xl text-blue-800">Proposal</strong>'
             : '<strong>Description of Work Performed:</strong>';
         updateBilling();
-    };
-    document.getElementById('modeNSP').onclick  = () => setMode('NSP');
-    document.getElementById('modeBILL').onclick = () => setMode('BILL');
-    document.getElementById('modePROP').onclick = () => setMode('PROP');
+    }
+    document.getElementById('modeNSP').addEventListener('click', function() { setMode('NSP'); });
+    document.getElementById('modeBILL').addEventListener('click', function() { setMode('BILL'); });
+    document.getElementById('modePROP').addEventListener('click', function() { setMode('PROP'); });
 
     // ── Invoice number ────────────────────────────────────────────────────────
-    const today = new Date().toISOString().slice(2,10).replace(/-/g,'');
-    let counter = (parseInt(localStorage.getItem('billbook_counter_'+today) || 0)) + 1;
-    localStorage.setItem('billbook_counter_'+today, counter);
+    var today = new Date().toISOString().slice(2,10).replace(/-/g,'');
+    var counter = (parseInt(localStorage.getItem('billbook_counter_' + today) || 0)) + 1;
+    localStorage.setItem('billbook_counter_' + today, counter);
     document.getElementById('invoiceNo').textContent = today + '-' + String(counter).padStart(3,'0');
 
     // ── Date ──────────────────────────────────────────────────────────────────
-    const billDateInput   = document.getElementById('billDate');
-    const billDateDisplay = document.getElementById('billDateDisplay');
+    var billDateInput = document.getElementById('billDate');
+    var billDateDisplay = document.getElementById('billDateDisplay');
     billDateInput.valueAsDate = new Date();
     billDateDisplay.textContent = new Date().toLocaleDateString('en-CA');
-    billDateInput.addEventListener('change', () => {
+    billDateInput.addEventListener('change', function() {
         billDateDisplay.textContent = billDateInput.value || new Date().toLocaleDateString('en-CA');
     });
 
-    // ── Sync text to print-safe divs ──────────────────────────────────────────
-    const syncText = () => {
+    // ── Sync text to print divs ───────────────────────────────────────────────
+    function syncText() {
         document.getElementById('customerPrint').textContent     = document.getElementById('customer').value;
         document.getElementById('descriptionPrint').textContent  = document.getElementById('description').value;
         document.getElementById('customerNamePrint').textContent = document.getElementById('customerName').value;
-    };
+    }
     document.getElementById('customer').addEventListener('input', syncText);
     document.getElementById('description').addEventListener('input', syncText);
     document.getElementById('customerName').addEventListener('input', syncText);
     syncText();
 
     // ── Billing calc ──────────────────────────────────────────────────────────
-    const updateBilling = () => {
+    function updateBilling() {
         if (currentMode === 'NSP') {
             document.getElementById('itemsTable').innerHTML = '';
-            ['subtotal','taxAmount','totalDue'].forEach(id => document.getElementById(id).textContent = '$0.00');
+            document.getElementById('subtotal').textContent  = '$0.00';
+            document.getElementById('taxAmount').textContent = '$0.00';
+            document.getElementById('totalDue').textContent  = '$0.00';
             return;
         }
-        const lines = document.getElementById('description').value.split('\n').filter(l => l.trim());
-        const table = document.getElementById('itemsTable');
+        var lines = document.getElementById('description').value.split('\n');
+        var table = document.getElementById('itemsTable');
         table.innerHTML = '';
-        let subtotal = 0;
-        lines.forEach(line => {
-            const m = line.match(/[$₹£€]?\s*(\d+(?:\.\d{1,2})?)\b/i);
+        var subtotal = 0;
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+            var m = line.match(/[$]?\s*(\d+(?:\.\d{1,2})?)\b/);
             if (m) {
-                const amt = parseFloat(m[1]);
+                var amt = parseFloat(m[1]);
                 subtotal += amt;
-                table.innerHTML += `<tr><td class="py-1">${line.trim()}</td><td class="text-right font-medium w-24">$${amt.toFixed(2)}</td></tr>`;
+                var row = table.insertRow();
+                row.insertCell(0).textContent = line;
+                var cell = row.insertCell(1);
+                cell.textContent = '$' + amt.toFixed(2);
+                cell.className = 'text-right font-medium w-24';
             }
-        });
-        const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+        }
+        var taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
         document.getElementById('taxPercent').textContent = taxRate.toFixed(1);
-        const tax = subtotal * taxRate / 100;
+        var tax = subtotal * taxRate / 100;
         document.getElementById('subtotal').textContent  = '$' + subtotal.toFixed(2);
         document.getElementById('taxAmount').textContent = '$' + tax.toFixed(2);
         document.getElementById('totalDue').textContent  = '$' + (subtotal + tax).toFixed(2);
-    };
+    }
     document.getElementById('description').addEventListener('input', updateBilling);
     document.getElementById('taxRate').addEventListener('input', updateBilling);
 
-    // ── Remove-section buttons ────────────────────────────────────────────────
-    document.getElementById('removeCustomerName').onclick = () => {
+    // ── Remove section buttons ────────────────────────────────────────────────
+    document.getElementById('removeCustomerName').addEventListener('click', function() {
         document.getElementById('customerNameSection').style.display = 'none';
         document.getElementById('customerName').value = '';
         syncText();
-    };
-    document.getElementById('removeSignature').onclick = () => {
+    });
+    document.getElementById('removeSignature').addEventListener('click', function() {
         document.getElementById('signatureSection').style.display = 'none';
         document.getElementById('signaturePreview').src = '';
         document.getElementById('signaturePreview').style.display = 'none';
         document.getElementById('sigPlaceholder').style.display = 'block';
-    };
+    });
 
     // ── Signature pad ─────────────────────────────────────────────────────────
-    const modal       = document.getElementById('signatureModal');
-    const canvas      = document.getElementById('signatureCanvas');
-    const ctx         = canvas.getContext('2d');
-    const preview     = document.getElementById('signaturePreview');
-    const placeholder = document.getElementById('sigPlaceholder');
-    let drawing = false;
+    var modal       = document.getElementById('signatureModal');
+    var canvas      = document.getElementById('signatureCanvas');
+    var ctx         = canvas.getContext('2d');
+    var preview     = document.getElementById('signaturePreview');
+    var placeholder = document.getElementById('sigPlaceholder');
+    var drawing     = false;
 
-    const resizeCanvas = () => {
-        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    function resizeCanvas() {
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         canvas.width  = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
-        ctx.putImageData(img, 0, 0);
-    };
+        ctx.putImageData(imageData, 0, 0);
+    }
     window.addEventListener('resize', resizeCanvas);
 
-    document.getElementById('addSigBtn').onclick = () => {
+    document.getElementById('addSigBtn').addEventListener('click', function() {
         modal.classList.remove('hidden');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         resizeCanvas();
-    };
-    document.getElementById('clearSigBtn').onclick = () => {
+    });
+    document.getElementById('clearSigBtn').addEventListener('click', function() {
         preview.src = ''; preview.style.display = 'none'; placeholder.style.display = 'block';
-    };
-    document.getElementById('clearModalBtn').onclick  = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
-    document.getElementById('cancelModalBtn').onclick = () => modal.classList.add('hidden');
-
-    // FIX: Changed from canvas.toBlob() + URL.createObjectURL() to canvas.toDataURL().
-    // toBlob produces a blob: URL that is session-scoped and sandboxed per-tab on
-    // iOS Safari — it breaks on any reload or tab switch. toDataURL() returns a
-    // base64 PNG string directly, which is stable, self-contained, and persists
-    // correctly in localStorage with no lifecycle management needed.
-    document.getElementById('doneModalBtn').onclick = () => {
-        const dataURL = canvas.toDataURL('image/png');
+    });
+    document.getElementById('clearModalBtn').addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+    document.getElementById('cancelModalBtn').addEventListener('click', function() {
+        modal.classList.add('hidden');
+    });
+    document.getElementById('doneModalBtn').addEventListener('click', function() {
+        var dataURL = canvas.toDataURL('image/png');
         preview.src = dataURL;
         preview.style.display = 'block';
         placeholder.style.display = 'none';
         modal.classList.add('hidden');
-    };
+    });
 
-    const getPos = e => {
-        const r = canvas.getBoundingClientRect();
-        return { x: (e.touches?.[0]?.clientX || e.clientX) - r.left, y: (e.touches?.[0]?.clientY || e.clientY) - r.top };
-    };
-    ['mousedown','touchstart'].forEach(ev => canvas.addEventListener(ev, e => {
-        e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
-    }));
-    ['mousemove','touchmove'].forEach(ev => canvas.addEventListener(ev, e => {
-        e.preventDefault();
-        if (drawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke(); }
-    }));
-    ['mouseup','touchend'].forEach(ev => canvas.addEventListener(ev, () => drawing = false));
+    function getPos(e) {
+        var r = canvas.getBoundingClientRect();
+        var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - r.left, y: clientY - r.top };
+    }
+    canvas.addEventListener('mousedown',  function(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+    canvas.addEventListener('mousemove',  function(e) { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke(); });
+    canvas.addEventListener('touchmove',  function(e) { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke(); }, { passive: false });
+    canvas.addEventListener('mouseup',  function() { drawing = false; });
+    canvas.addEventListener('touchend', function() { drawing = false; });
+
+    // ── Save current bill ─────────────────────────────────────────────────────
+    function saveCurrent() {
+        syncText();
+        var sigImg = document.getElementById('signaturePreview');
+        var sigDataURL = null;
+        if (sigImg && sigImg.style.display !== 'none' && sigImg.src && sigImg.src.indexOf('data:') === 0) {
+            sigDataURL = sigImg.src;
+        }
+        var billClone = document.getElementById('bill').cloneNode(true);
+        var clonedImg = billClone.querySelector('#signaturePreview');
+        if (clonedImg) {
+            if (sigDataURL) {
+                clonedImg.src = sigDataURL;
+                clonedImg.style.display = 'block';
+            } else {
+                clonedImg.src = '';
+                clonedImg.style.display = 'none';
+            }
+        }
+        var data = getHistory();
+        data.unshift({
+            date:      new Date().toISOString().slice(0,10),
+            invoiceNo: document.getElementById('invoiceNo').textContent,
+            total:     document.getElementById('totalDue').textContent,
+            customer:  document.getElementById('customer').value,
+            mode:      currentMode,
+            html:      billClone.innerHTML
+        });
+        if (data.length > 100) data.pop();
+        setHistory(data);
+        updateHistoryCount();
+    }
 
     // ── Print ─────────────────────────────────────────────────────────────────
-    document.getElementById('printBtn').onclick = () => { syncText(); saveCurrent(); setTimeout(() => window.print(), 150); };
+    document.getElementById('printBtn').addEventListener('click', function() {
+        syncText(); saveCurrent(); setTimeout(function() { window.print(); }, 150);
+    });
 
     // ── PDF ───────────────────────────────────────────────────────────────────
-    // FIX: was truncated mid-line in the original file — restored in full.
-    document.getElementById('pdfBtn').onclick = () => {
-        syncText();
-        saveCurrent();
-        setTimeout(() => {
-            const type = currentMode === 'PROP' ? 'Proposal' : currentMode;
-            html2pdf()
-                .set({ margin: 5, filename: `${type}_${document.getElementById('invoiceNo').textContent}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } })
-                .from(document.getElementById('bill'))
-                .save();
+    document.getElementById('pdfBtn').addEventListener('click', function() {
+        syncText(); saveCurrent();
+        setTimeout(function() {
+            var type = currentMode === 'PROP' ? 'Proposal' : currentMode;
+            html2pdf().set({
+                margin: 5,
+                filename: type + '_' + document.getElementById('invoiceNo').textContent + '.pdf',
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4' }
+            }).from(document.getElementById('bill')).save();
         }, 200);
-    };
+    });
 
     // ── New bill ──────────────────────────────────────────────────────────────
-    // FIX: handler was missing entirely (lost to file truncation) — added here.
-    document.getElementById('newBtn').onclick = () => {
+    document.getElementById('newBtn').addEventListener('click', function() {
         if (!confirm('Start a new bill? Unsaved changes will be lost.')) return;
         document.getElementById('customer').value     = '';
         document.getElementById('description').value  = '';
         document.getElementById('customerName').value = '';
         syncText();
-        // Reset signature
         preview.src = ''; preview.style.display = 'none'; placeholder.style.display = 'block';
-        // New invoice number for today
-        const d = new Date().toISOString().slice(2,10).replace(/-/g,'');
-        let c = (parseInt(localStorage.getItem('billbook_counter_'+d) || 0)) + 1;
-        localStorage.setItem('billbook_counter_'+d, c);
+        var d = new Date().toISOString().slice(2,10).replace(/-/g,'');
+        var c = (parseInt(localStorage.getItem('billbook_counter_' + d) || 0)) + 1;
+        localStorage.setItem('billbook_counter_' + d, c);
         document.getElementById('invoiceNo').textContent = d + '-' + String(c).padStart(3,'0');
-        // Reset date
         billDateInput.valueAsDate = new Date();
         billDateDisplay.textContent = new Date().toLocaleDateString('en-CA');
-        // Restore any hidden sections
         document.getElementById('customerNameSection').style.display = '';
         document.getElementById('signatureSection').style.display    = '';
         setMode('BILL');
-        updateBilling();
         showView('bill');
-    };
+    });
 
-    // ── Init ───────────── 
+    // ── Init ──────────────────────────────────────────────────────────────────
+    updateBilling();
+    updateHistoryCount();
+});
+</script>
+</body>
+</html>
